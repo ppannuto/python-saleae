@@ -21,6 +21,7 @@ my immediate needs, but it also should not have any known problems.
 To get a feel for how the library works and what it can do, try the built-in demo:
 
 ::
+
     #!/usr/bin/env python3
     import saleae
     saleae.demo()
