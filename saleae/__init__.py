@@ -3,4 +3,4 @@
 __all__ = ['saleae']
 from .version import __version__
 
-from .saleae import SaleaeConnection
+from .saleae import Saleae,Trigger,PerformanceOption,demo

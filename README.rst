@@ -6,9 +6,25 @@ This library implements the control protocol for the
 documentation and example here:
 http://support.saleae.com/hc/en-us/articles/201104764-Socket-API-beta
 
+**IMPORTANT: You must enable the 'Remote Scripting Server' in Saleae.** Click
+on "Options" in the top-right, the "Developer" tab, and check "Enable scripting
+socket server". This should not require a restart.
+
+This library requires Saleae Logic 1.2.x or greater. Unfortunately there is no
+way to check the version of Logic running using the scripting protocol so this
+is difficult to check at runtime.
+
 Currently, this is basically a direct mapping of API calls with some small
 sanity checking and conveniences. It has not been extensively tested beyond
 my immediate needs, but it also should not have any known problems.
+
+To get a feel for how the library works and what it can do, try the built-in demo:
+
+::
+    #!/usr/bin/env python3
+    import saleae
+    saleae.demo()
+
 
 Issues, updates, pull requests, etc should be directed
 `to github <https://github.com/ppannuto/python-saleae>`__.
@@ -23,12 +39,13 @@ The easiest method is to simply use pip:
 
     (sudo) pip install saleae
 
+
 Usage
 -----
 
 ::
 
     import saleae
-    s = saleae.SaleaeConnection()
+    s = saleae.Saleae()
     s.capture_to_file('~/test.logicdata')
 

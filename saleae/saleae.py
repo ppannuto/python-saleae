@@ -2,7 +2,7 @@
 
 import logging
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 import bisect
 import enum
@@ -11,11 +11,50 @@ import socket
 import sys
 import time
 
-class SaleaeConnection():
-	class SaleaeConnectionError(Exception):
+@enum.unique
+class Trigger(enum.IntEnum):
+	# Python convention is to start enums at 1 for truth checks, but it
+	# seems reasonable that no trigger should compare as false
+	NoTrigger = 0
+	High = 1
+	Low = 2
+	Posedge = 3
+	Negedge = 4
+
+@enum.unique
+class PerformanceOption(enum.IntEnum):
+	Full = 100
+	Half = 50
+	Third = 33
+	Quarter = 25
+	Low = 20
+
+class ConnectedDevice():
+	def __init__(self, type, name, id, index, active):
+		self.type = type
+		self.name = name
+		self.id = int(id, 16)
+		self.index = int(index)
+		self.active = bool(active)
+
+	def __str__(self):
+		if self.active:
+			return "<saleae.ConnectedDevice #{self.index} {self.type} {self.name} ({self.id:x}) **ACTIVE**>".format(self=self)
+		else:
+			return "<saleae.ConnectedDevice #{self.index} {self.type} {self.name} ({self.id:x})>".format(self=self)
+
+	def __repr__(self):
+		return str(self)
+
+
+class Saleae():
+	class SaleaeError(Exception):
 		pass
 
-	class CommandNAKedError(SaleaeConnectionError):
+	class CommandNAKedError(SaleaeError):
+		pass
+
+	class ImpossibleSettings(SaleaeError):
 		pass
 
 	def __init__(self, host='localhost', port=10429):
@@ -24,7 +63,15 @@ class SaleaeConnection():
 		self.connected_devices = None
 
 		self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self._s.connect((host, port))
+		try:
+			self._s.connect((host, port))
+		except ConnectionRefusedError:
+			print("Failed to connect to saleae at {}:{}".format(host, port))
+			print("")
+			print("Did you remember to 'Enable scripting socket server' (see README)?")
+			print("")
+			raise
+		log.info("Connected.")
 		self._rxbuf = ''
 
 	def _build(self, s):
@@ -37,7 +84,7 @@ class SaleaeConnection():
 	def _finish(self, s=None):
 		if s:
 			self._build(s)
-		self._send(', '.join(self._to_send))
+		return self._cmd(', '.join(self._to_send))
 
 	def _round_up_or_max(self, value, candidates):
 		i = bisect.bisect_left(value, candidates)
@@ -54,31 +101,33 @@ class SaleaeConnection():
 			self._rxbuf += self._s.recv(1024).decode('UTF-8')
 			log.debug("Recv >{}<".format(self._rxbuf))
 			if 'NAK' == self._rxbuf[0:3]:
+				self._rxbuf = self._rxbuf[3:]
 				raise self.CommandNAKedError
 		ret, self._rxbuf = self._rxbuf.split('ACK', 1)
 		return ret
 
-	@enum.unique
-	class Trigger(enum.IntEnum):
-		# Python convention is to start enums at 1 for truth checks, but it
-		# seems reasonable that no trigger should compare as false
-		NoTrigger = 0
-		High = 1
-		Low = 2
-		Posedge = 3
-		Negedge = 4
+	def _cmd(self, s):
+		self._send(s)
+		return self._recv()
 
-	@enum.unique
-	class PerformanceOption(enum.IntEnum):
-		Full = 100
-		Half = 50
-		Third = 33
-		Quarter = 25
-		Low = 20
+	def set_trigger_one_channel(self, channel, trigger):
+		'''Convenience method to set one trigger.
 
-	def set_trigger(self, channels):
+		:param channel: Integer specifying channel
+		:param trigger: saleae.Trigger indicating trigger type
+		'''
+
+	def set_triggers_for_all_channels(self, channels):
+		'''Set the trigger conditions for all channels.
+		
+		:param channels: An array of saleae.Trigger for each channel
+		
+		*Note: Calls to this function must always set all channels. The Saleae
+		protocol does not currently expose a method to read current triggers.*'''
 		self._build('SET_TRIGGER')
 		for c in channels:
+			# Try coercing b/c it will throw a nice exception if it fails
+			c = Trigger(c)
 			if c == Trigger.NoTrigger:
 				self._build('')
 			elif c == Trigger.High:
@@ -94,24 +143,74 @@ class SaleaeConnection():
 		self._finish()
 
 	def set_num_samples(self, samples):
-		self._send('SET_NUM_SAMPLES, {}'.format(samples))
+		'''Set the capture duration to a specific number of samples.
+
+		*From Saleae documentation*
+		  Note: USB transfer chunks are about 33ms of data so the number of
+		  samples you actually get are in steps of 33ms.
+		'''
+		self._cmd('SET_NUM_SAMPLES, {:d}'.format(int(samples)))
 
 	def set_capture_seconds(self, seconds):
-		self._send('SET_CAPTURE_SECONDS, {}'.format(seconds))
+		'''Set the capture duration to a length of time.
 
-	def set_sample_rate(self, digital_rate, analog_rate, round=True):
-		'''Only fixed sample rates are supported.'''
+		:param seconds: Capture length. Partial seconds (floats) are fine.
+		'''
+		self._cmd('SET_CAPTURE_SECONDS, {}'.format(float(seconds)))
 
-		if self.sample_rates is None:
-			self.get_all_sample_rates()
-		if (digital_rate, analog_rate) not in self.sample_rates:
+	def set_sample_rate(self, sample_rate_tuple):
+		'''Set the sample rate. Note the caveats. Consider ``set_sample_rate_by_minimum``.
+
+		Due to saleae software limitations, only sample rates exposed in the
+		Logic software can be used. Use the ``get_all_sample_rates`` method to
+		get all of the valid sample rates. The list of valid sample rates
+		changes based on the number and type of active channels, so set up all
+		channel configuration before attempting to set the sample rate.
+		'''
+
+		self.get_all_sample_rates()
+		if sample_rate_tuple not in self.sample_rates:
 			raise NotImplementedError("Unsupported sample rate")
 
-		self._send('SET_SAMPLE_RATE, {}, {}'.format(digital_rate, analog_rate))
+		self._cmd('SET_SAMPLE_RATE, {}, {}'.format(*sample_rate_tuple))
+
+	def set_sample_rate_by_minimum(self, digital_minimum=0, analog_minimum=0):
+		'''Set to a valid sample rate given current configuration and a target.
+
+		Because the avaiable sample rates are not known until runtime after all
+		other configuration, this helper method takes a minimum digital and/or
+		analog sampling rate and will choose the minimum sampling rate available
+		at runtime. Setting digital or analog to 0 will disable the respective
+		sampling method.
+
+		:returns (digital_rate, analog_rate): the sample rate that was set
+		:raises ImpossibleSettings: rasied if sample rate cannot be met
+		'''
+
+		if digital_minimum == analog_minimum == 0:
+			raise self.ImpossibleSettings("One of digital or analog minimum must be nonzero")
+
+		self.get_all_sample_rates()
+
+		# Saleae returns these sorted highest rate to lowest, check if that changes
+		if len(self.sample_rates) > 1:
+			assert self.sample_rates[0][0] >= self.sample_rates[-1][0]
+
+		for rate in reversed(self.sample_rates):
+			if digital_minimum != 0 and digital_minimum <= rate[0]:
+				if (analog_minimum == 0) or (analog_minimum != 0 and analog_minimum <= rate[1]):
+					break
+			elif analog_minimum != 0 and analog_minimum <= rate[1]:
+				break
+		else:
+			raise self.ImpossibleSettings("No sample rate for configuration. Try lowering rate or disabling channels (especially analog channels)")
+
+		self.set_sample_rate(rate)
+		return rate
 
 	def get_all_sample_rates(self):
-		self._send('GET_ALL_SAMPLE_RATES')
-		rates = self._recv()
+		'''Get available sample rate combinations for the current performance level and channel combination.'''
+		rates = self._cmd('GET_ALL_SAMPLE_RATES')
 		self.sample_rates = []
 		for line in rates.split('\n'):
 			if len(line):
@@ -120,17 +219,23 @@ class SaleaeConnection():
 		return self.sample_rates
 
 	def get_performance(self):
-		self._send("GET_PERFORMANCE")
-		return self.PerformanceOption(self._recv())
+		'''Get performance value. Performance controls USB traffic and quality.
+		
+		:returns: a saleae.PerformanceOption'''
+		return PerformanceOption(int(self._cmd("GET_PERFORMANCE")))
 
 	def set_performance(self, performance):
+		'''Set performance value. Performance controls USB traffic and quality.
+		
+		:param performance: must be of type saleae.PerformanceOption
+		
+		**Note: This will change the sample rate.**'''
 		# Ensure this is a valid setting
-		performance = self.PerformanceOption(performance)
-		self._send('SET_PERFORMANCE_OPTION, {}'.format(performance.value))
+		performance = PerformanceOption(performance)
+		self._cmd('SET_PERFORMANCE, {}'.format(performance.value))
 
 	def get_capture_pretrigger_buffer_size(self):
-		self._send('GET_CAPTURE_PRETRIGGER_BUFFER_SIZE')
-		return self._recv()
+		return int(self._cmd('GET_CAPTURE_PRETRIGGER_BUFFER_SIZE'))
 
 	def set_capture_pretrigger_buffer_size(self, size, round=True):
 		valid_sizes = (1000000, 10000000, 100000000, 1000000000)
@@ -138,35 +243,18 @@ class SaleaeConnection():
 			size = self._round_up_or_max(size, valid_sizes)
 		elif size not in valid_sizes:
 			raise NotImplementedError("Invalid size")
-		self._send('SET_CAPTURE_PRETRIGGER_BUFFER_SIZE, {}'.format(size))
-
-	class ConnectedDevice():
-		def __init__(self, type, name, id, index, active):
-			self.type = type
-			self.name = name
-			self.id = int(id, 16)
-			self.index = int(index)
-			self.active = bool(active)
-
-		def __str__(self):
-			if self.active:
-				return "<saleae.ConnectedDevice #{self.index} {self.name} ({self.id:x}) {self.type} ACTIVE>".format(self=self)
-			else:
-				return "<saleae.ConnectedDevice #{self.index} {self.name} ({self.id:x}) {self.type}>".format(self=self)
-
-		def __repr__(self):
-			return str(self)
+		self._cmd('SET_CAPTURE_PRETRIGGER_BUFFER_SIZE, {}'.format(size))
 
 	def get_connected_devices(self):
-		self._send('GET_CONNECTED_DEVICES')
+		devices = self._cmd('GET_CONNECTED_DEVICES')
 		self.connected_devices = []
-		for dev in self._recv().split('\n')[:-1]:
+		for dev in devices.split('\n')[:-1]:
 			active = False
 			try:
 				index, name, type, id, active = list(map(str.strip, dev.split(',')))
 			except ValueError:
 				index, name, type, id = list(map(str.strip, dev.split(',')))
-			self.connected_devices.append(self.ConnectedDevice(type, name, id, index, active))
+			self.connected_devices.append(ConnectedDevice(type, name, id, index, active))
 		return self.connected_devices
 
 	def select_active_device(self, device_index):
@@ -174,14 +262,14 @@ class SaleaeConnection():
 			self.get_connected_devices()
 		for dev in self.connected_devices:
 			if dev.index == device_index:
-				self._send('SELECT_ACTIVE_DEVICE, {}'.format(device_index))
+				self._cmd('SELECT_ACTIVE_DEVICE, {}'.format(device_index))
 				break
 		else:
 			raise NotImplementedError("Device index not in connected_devices")
 
 	def get_active_channels(self):
-		self._send('GET_ACTIVE_CHANNELS')
-		msg = list(map(str.strip, self._recv().split(',')))
+		channels = self._cmd('GET_ACTIVE_CHANNELS')
+		msg = list(map(str.strip, channels.split(',')))
 		assert msg.pop(0) == 'digital_channels'
 		i = msg.index('analog_channels')
 		digital = list(map(int, msg[:i]))
@@ -192,47 +280,61 @@ class SaleaeConnection():
 	def set_active_channels(self, digital, analog):
 		# TODO Enforce "Note: This feature is only supported on Logic 16,
 		# Logic 8(2nd gen), Logic Pro 8, and Logic Pro 16"
-		self._build('SET_ACTIVE_CHANNELS digital_channels')
+		self._build('SET_ACTIVE_CHANNELS')
+		self._build('digital_channels')
 		for ch in digital:
 			self._build('{}'.format(ch))
-		self._build(', analog_channels')
+		self._build('analog_channels')
 		for ch in analog:
 			self._build('{}'.format(ch))
 		self._finish()
 
 	def reset_active_channels(self):
-		'''Sets all channels to active'''
-		self._send('RESET_ACTIVE_CHANNELS')
+		'''Set all channels to active.'''
+		self._cmd('RESET_ACTIVE_CHANNELS')
 
-	def capture(self):
-		self._send('CAPTURE')
+	def capture_start(self):
+		'''Start a new capture and immediately return.'''
+		self._cmd('CAPTURE')
 
-	def stop_capture(self):
-		self._send('STOP_CAPTURE')
-		self._recv()
-		raise NotImplementedError
+	def capture_start_and_wait_until_finished(self):
+		self.capture_start()
+		while not self.is_processing_complete():
+			time.sleep(0.1)
+
+	def capture_stop(self):
+		'''Stop a capture and return whether any data was captured.
+
+		:returns: True if any data collected, False otherwise
+		'''
+		try:
+			self._cmd('STOP_CAPTURE')
+			return True
+		except self.CommandNAKedError:
+			return False
 
 	def capture_to_file(self, file_path_on_target_machine):
 		if os.path.splitext(file_path_on_target_machine)[1] == '':
 			file_path_on_target_machine += '.logicdata'
-		self._send('CAPTURE_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('CAPTURE_TO_FILE, ' + file_path_on_target_machine)
 
 	def get_inputs(self):
 		raise NotImplementedError("Saleae temporarily dropped this command")
 
 	def is_processing_complete(self):
-		raise NotImplementedError
+		resp = self._cmd('IS_PROCESSING_COMPLETE')
+		return resp.strip().upper() == 'TRUE'
 
 	def save_to_file(self, file_path_on_target_machine):
 		while not self.is_processing_complete():
 			time.sleep(1)
-		self._send('SAVE_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('SAVE_TO_FILE, ' + file_path_on_target_machine)
 
 	def load_from_file(self, file_path_on_target_machine):
-		self._send('LOAD_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('LOAD_TO_FILE, ' + file_path_on_target_machine)
 
 	def close_all_tabs(self):
-		self._send('CLOSE_ALL_TABS')
+		self._cmd('CLOSE_ALL_TABS')
 
 	def export_data(self,
 			file_path_on_target_machine,
@@ -312,3 +414,78 @@ class SaleaeConnection():
 	def is_analyzer_complete(self, analyzer_index):
 		raise NotImplementedError
 
+
+def demo(host='localhost', port=10429):
+	'''A demonstration / usage guide that mirrors Saleae's C# demo'''
+
+	print("Running Saleae connection demo.\n")
+
+	s = Saleae(host=host, port=port)
+	print("Saleae connected.")
+	input("Press Enter to continue...\n")
+
+	try:
+		s.set_performance(PerformanceOption.Full)
+		print("Set performance to full.")
+	except s.CommandNAKedError:
+		print("Could not set performance.")
+		print("\tIs a physical Saleae device connected? This command only works")
+		print("\twhen actual hardware is plugged in. You can skip it if you are")
+		print("\tjust trying things out.")
+	input("Press Enter to continue...\n")
+
+	devices = s.get_connected_devices()
+	print("Connected devices:")
+	for device in devices:
+		print("\t{}".format(device))
+
+	# n.b. there are always a few connected test devices if no real HW
+	if len(devices) > 1:
+		i = int(input("Choose active device (collect data from which Saleae?) [1-{}] ".format(len(devices))))
+		while i < 1 or i > len(devices):
+			print("You must select a valid device index")
+			i = int(input("Choose active device (collect data from which Saleae?) [1-{}] ".format(len(devices))))
+
+		s.select_active_device(i)
+		print("Connected devices:")
+		devices = s.get_connected_devices()
+		for device in devices:
+			print("\t{}".format(device))
+	else:
+		print("Only one Saleae device. Skipping device selection")
+	input("Press Enter to continue...\n")
+
+	digital = [0,1,2,3,4]
+	analog = [0,1]
+	print("Setting active channels (digital={}, analog={})".format(digital, analog))
+	s.set_active_channels(digital, analog)
+	input("Press Enter to continue...\n")
+
+	digital, analog = s.get_active_channels()
+	print("Reading back active channels:")
+	print("\tdigital={}\n\tanalog={}".format(digital, analog))
+	input("Press Enter to continue...\n")
+
+	print("Setting to capture 2e6 samples")
+	s.set_num_samples(2e6)
+	input("Press Enter to continue...\n")
+
+	print("Setting to sample rate to at least digitial 4 MS/s, analog 100 S/s")
+	rate = s.set_sample_rate_by_minimum(4e6, 100)
+	print("\tSet to", rate)
+	input("Press Enter to continue...\n")
+
+	print("Starting a capture")
+	# Also consider capture_start_and_wait_until_finished for non-demo apps
+	s.capture_start()
+	while not s.is_processing_complete():
+		print("\t..waiting for capture to complete")
+		time.sleep(1)
+	print("Capture complete")
+
+	print("")
+	print("Demo complete.")
+
+
+if __name__ == '__main__':
+	demo()
