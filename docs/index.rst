@@ -7,6 +7,9 @@
 
 ----------
 
+The Saleae class
+----------------
+
 .. autoclass:: saleae.Saleae
     :members:
 
