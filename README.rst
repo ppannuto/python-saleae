@@ -1,6 +1,8 @@
 python-saleae
 =============
 
+|docs|
+
 This library implements the control protocol for the
 `Saleae Logic Analyzer <https://www.saleae.com/>`__. It is based off of the
 documentation and example here:
@@ -49,4 +51,10 @@ Usage
     import saleae
     s = saleae.Saleae()
     s.capture_to_file('~/test.logicdata')
+
+
+.. |docs| image:: https://readthedocs.org/projects/python-saleae/badge/?version=latest
+    :alt: Documentation Status
+    :scale: 100%
+    :target: https://python-saleae.readthedocs.org/
 
