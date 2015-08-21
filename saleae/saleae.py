@@ -145,6 +145,8 @@ class Saleae():
 	def set_num_samples(self, samples):
 		'''Set the capture duration to a specific number of samples.
 
+		:param samples: Number of samples to capture, will be coerced to ``int``
+
 		*From Saleae documentation*
 		  Note: USB transfer chunks are about 33ms of data so the number of
 		  samples you actually get are in steps of 33ms.
@@ -166,6 +168,8 @@ class Saleae():
 		get all of the valid sample rates. The list of valid sample rates
 		changes based on the number and type of active channels, so set up all
 		channel configuration before attempting to set the sample rate.
+
+		:param sample_rate_tuple: A sample rate as returned from ``get_all_sample_rates``
 		'''
 
 		self.get_all_sample_rates()
@@ -183,6 +187,8 @@ class Saleae():
 		at runtime. Setting digital or analog to 0 will disable the respective
 		sampling method.
 
+		:param digital_minimum: Minimum digital sampling rate in samples/sec or 0 for don't care
+		:param analog_minimum: Minimum analog sampling rate in samples/sec or 0 for don't care
 		:returns (digital_rate, analog_rate): the sample rate that was set
 		:raises ImpossibleSettings: rasied if sample rate cannot be met
 		'''
@@ -221,7 +227,7 @@ class Saleae():
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
 		
-		:returns: a saleae.PerformanceOption'''
+		:returns: A ``saleae.PerformanceOption``'''
 		return PerformanceOption(int(self._cmd("GET_PERFORMANCE")))
 
 	def set_performance(self, performance):
