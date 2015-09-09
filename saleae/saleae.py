@@ -347,7 +347,7 @@ class Saleae():
 			digital_channels=None,
 			analog_channels=None,
 			analog_format="voltage",
-			time="all_time",
+			time_span="all_time",
 			format="csv",				# 'csv, bin, vcd, matlab'
 			csv_column_headers=True,
 			csv_delimeter='comma',		# 'comma' or 'tab'
@@ -379,7 +379,7 @@ class Saleae():
 				raise NotImplementedError("bad analog_format")
 			self._build(analog_format)
 
-		if time not in ('all_time',):
+		if time_span not in ('all_time',):
 			raise NotImplementedError('times other that all_time')
 		self._build('all_time')
 
