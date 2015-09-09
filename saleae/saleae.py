@@ -84,7 +84,9 @@ class Saleae():
 	def _finish(self, s=None):
 		if s:
 			self._build(s)
-		return self._cmd(', '.join(self._to_send))
+		ret = self._cmd(', '.join(self._to_send))
+		self._to_send = []
+		return ret
 
 	def _round_up_or_max(self, value, candidates):
 		i = bisect.bisect_left(value, candidates)
