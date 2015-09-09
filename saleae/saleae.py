@@ -108,9 +108,13 @@ class Saleae():
 		ret, self._rxbuf = self._rxbuf.split('ACK', 1)
 		return ret
 
-	def _cmd(self, s):
+	def _cmd(self, s, wait_for_ack=True):
 		self._send(s)
-		return self._recv()
+
+		ret = None
+		if wait_for_ack:
+			ret = self._recv()
+		return ret
 
 	def set_trigger_one_channel(self, channel, trigger):
 		'''Convenience method to set one trigger.
@@ -303,7 +307,7 @@ class Saleae():
 
 	def capture_start(self):
 		'''Start a new capture and immediately return.'''
-		self._cmd('CAPTURE')
+		self._cmd('CAPTURE', False)
 
 	def capture_start_and_wait_until_finished(self):
 		self.capture_start()
