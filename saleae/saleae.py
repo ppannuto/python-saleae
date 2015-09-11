@@ -116,21 +116,24 @@ class Saleae():
 			ret = self._recv()
 		return ret
 
-	def set_trigger_one_channel(self, channel, trigger):
+	def set_trigger_one_channel(self, digital_channel, trigger):
 		'''Convenience method to set one trigger.
 
 		:param channel: Integer specifying channel
 		:param trigger: saleae.Trigger indicating trigger type
+		:raises ImpossibleSettings: rasied if channel is not active
 		'''
-		raise NotImplementedError
+		digital, analog = self.get_active_channels()
 
-	def set_triggers_for_all_channels(self, channels):
-		'''Set the trigger conditions for all channels.
-		
-		:param channels: An array of saleae.Trigger for each channel
-		
-		*Note: Calls to this function must always set all channels. The Saleae
-		protocol does not currently expose a method to read current triggers.*'''
+		to_set = [Trigger.NoTrigger for x in range(len(digital))]
+		trigger = Trigger(trigger)
+		try:
+			to_set[digital.index(digital_channel)] = trigger
+		except ValueError:
+			raise self.ImpossibleSettings("Cannot set trigger on inactive channel")
+		self._set_triggers_for_all_channels(to_set)
+
+	def _set_triggers_for_all_channels(self, channels):
 		self._build('SET_TRIGGER')
 		for c in channels:
 			# Try coercing b/c it will throw a nice exception if it fails
@@ -148,6 +151,22 @@ class Saleae():
 			else:
 				raise NotImplementedError("Must pass trigger type")
 		self._finish()
+
+	def set_triggers_for_all_channels(self, channels):
+		'''Set the trigger conditions for all active digital channels.
+		
+		:param channels: An array of saleae.Trigger for each channel
+		:raises ImpossibleSettings: rasied if configuration is not provided for all channels
+		
+		*Note: Calls to this function must always set all active digital
+		channels. The Saleae protocol does not currently expose a method to read
+		current triggers.*'''
+
+		digital, analog = self.get_active_channels()
+		if len(channels) != len(digital):
+			raise self.ImpossibleSettings("Trigger settings must set all active digital channels")
+
+		self._set_triggers_for_all_channels(channels)
 
 	def set_num_samples(self, samples):
 		'''Set the capture duration to a specific number of samples.
