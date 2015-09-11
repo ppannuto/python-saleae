@@ -122,6 +122,7 @@ class Saleae():
 		:param channel: Integer specifying channel
 		:param trigger: saleae.Trigger indicating trigger type
 		'''
+		raise NotImplementedError
 
 	def set_triggers_for_all_channels(self, channels):
 		'''Set the trigger conditions for all channels.
