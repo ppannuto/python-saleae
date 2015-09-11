@@ -300,6 +300,9 @@ class Saleae():
 			raise NotImplementedError("Device index not in connected_devices")
 
 	def get_active_channels(self):
+		'''Get the active digital and analog channels.
+		
+		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively'''
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		msg = list(map(str.strip, channels.split(',')))
 		assert msg.pop(0) == 'digital_channels'
