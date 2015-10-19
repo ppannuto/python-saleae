@@ -154,10 +154,10 @@ class Saleae():
 
 	def set_triggers_for_all_channels(self, channels):
 		'''Set the trigger conditions for all active digital channels.
-		
+
 		:param channels: An array of saleae.Trigger for each channel
 		:raises ImpossibleSettings: rasied if configuration is not provided for all channels
-		
+
 		*Note: Calls to this function must always set all active digital
 		channels. The Saleae protocol does not currently expose a method to read
 		current triggers.*'''
@@ -252,15 +252,15 @@ class Saleae():
 
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
-		
+
 		:returns: A ``saleae.PerformanceOption``'''
 		return PerformanceOption(int(self._cmd("GET_PERFORMANCE")))
 
 	def set_performance(self, performance):
 		'''Set performance value. Performance controls USB traffic and quality.
-		
+
 		:param performance: must be of type saleae.PerformanceOption
-		
+
 		**Note: This will change the sample rate.**'''
 		# Ensure this is a valid setting
 		performance = PerformanceOption(performance)
@@ -301,7 +301,7 @@ class Saleae():
 
 	def get_active_channels(self):
 		'''Get the active digital and analog channels.
-		
+
 		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively'''
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		msg = list(map(str.strip, channels.split(',')))
@@ -376,11 +376,16 @@ class Saleae():
 			digital_channels=None,
 			analog_channels=None,
 			analog_format="voltage",
-			time_span="all_time",
+			time_span=None,				# 'None-->all_time, [x.x, y.y]-->time_span'
 			format="csv",				# 'csv, bin, vcd, matlab'
 			csv_column_headers=True,
 			csv_delimeter='comma',		# 'comma' or 'tab'
+			csv_timestamp='time_stamp',	# 'time_stamp, sample_number'
+			csv_combined=True,			# 'combined' else 'separate'
+			csv_row_per_change=True,	# 'row_per_change' else 'row_per_sample'
 			csv_number_format='hex',	# dec, hex, bin, ascii
+			bin_per_change=True,		# 'on_change' else 'each_sample'
+			bin_word_size='8'			# 8, 16, 32, 64
 			):
 		# export_data, C:\temp_file, digital_channels, 0, 1, analog_channels, 1, voltage, all_time, adc, csv, headers, comma, time_stamp, separate, row_per_change, Dec
 		# export_data, C:\temp_file, all_channels, time_span, 0.2, 0.4, vcd
@@ -408,12 +413,17 @@ class Saleae():
 				raise NotImplementedError("bad analog_format")
 			self._build(analog_format)
 
-		if time_span not in ('all_time',):
-			raise NotImplementedError('times other that all_time')
-		self._build('all_time')
+		if time_span is None:
+			self._build('all_time')
+		elif len(time_span) == 2:
+			self._build('time_span')
+			self._build(str(time_span[0]))
+			self._build(str(time_span[1]))
+		else:
+			raise NotImplementedError('invalid time format')
 
 		if format == 'csv':
-			self._build('csv')
+			self._build(format)
 
 			if csv_column_headers:
 				self._build('headers')
@@ -424,15 +434,35 @@ class Saleae():
 				raise NotImplementedError('bad csv delimeter')
 			self._build(csv_delimeter)
 
-			#TODO the rest of these options
-			self._build('time_stamp')
-			self._build('combined')
+			if csv_timestamp not in ('time_stamp', 'sample_number'):
+				raise NotImplementedError('bad csv timestamp')
+			self._build(csv_timestamp)
+
+			if csv_combined:
+				self._build('combined')
+			else:
+				self._build('separate')
+
+			if csv_row_per_change:
+				self._build('row_per_change')
+			else:
+				self._build('row_per_sample')
 
 			if csv_number_format not in ('dec', 'hex', 'bin', 'ascii'):
 				raise NotImplementedError('bad csv number format')
 			self._build(csv_number_format)
 		elif format == 'bin':
-			raise NotImplementedError('bin format')
+			self._build(format)
+
+			if bin_per_change:
+				self._build('on_change')
+			else:
+				self._build('each_sample')
+
+			if bin_word_size not in ('8', '16', '32', '64'):
+				raise NotImplementedError('bad bin word size')
+			self._build(bin_word_size)
+
 		elif format in ('vcd', 'matlab'):
 			# No options for these
 			self._build(format)
