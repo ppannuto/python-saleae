@@ -394,6 +394,12 @@ class Saleae():
 		while not self.is_processing_complete():
 			time.sleep(1)
 
+		# The path needs to be absolute. This is hard to check reliably since we
+		# don't know the OS on the target machine, but we can do a basic check
+		# for something that will definitely fail
+		if file_path_on_target_machine[0] in ('~', '.'):
+			raise NotImplementedError('File path must be absolute')
+
 		self._build('EXPORT_DATA')
 		self._build(file_path_on_target_machine)
 		if (digital_channels is None) and (analog_channels is None):
