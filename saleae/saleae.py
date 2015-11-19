@@ -224,21 +224,35 @@ class Saleae():
 
 		self.get_all_sample_rates()
 
-		# Saleae returns these sorted highest rate to lowest, check if that changes
-		if len(self.sample_rates) > 1:
-			assert self.sample_rates[0][0] >= self.sample_rates[-1][0]
-
-		for rate in reversed(self.sample_rates):
+		# Sample rates may be unordered, iterate all tracking the best
+		best_rate = None
+		best_bandwidth = None
+		for rate in self.sample_rates:
 			if digital_minimum != 0 and digital_minimum <= rate[0]:
 				if (analog_minimum == 0) or (analog_minimum != 0 and analog_minimum <= rate[1]):
-					break
+					if best_rate is None:
+						best_rate = rate
+						best_bandwidth = self.get_bandwidth(sample_rate=rate)
+					else:
+						new_bandwidth = self.get_bandwidth(sample_rate=rate)
+						if new_bandwidth < best_bandwidth:
+							best_rate = rate
+							best_bandwidth = new_bandwidth
 			elif analog_minimum != 0 and analog_minimum <= rate[1]:
-				break
-		else:
+				if best_rate is None:
+					best_rate = rate
+					best_bandwidth = self.get_bandwidth(sample_rate=rate)
+				else:
+					new_bandwidth = self.get_bandwidth(sample_rate=rate)
+					if new_bandwidth < best_bandwidth:
+						best_rate = rate
+						best_bandwidth = new_bandwidth
+
+		if best_rate is None:
 			raise self.ImpossibleSettings("No sample rate for configuration. Try lowering rate or disabling channels (especially analog channels)")
 
-		self.set_sample_rate(rate)
-		return rate
+		self.set_sample_rate(best_rate)
+		return best_rate
 
 	def get_all_sample_rates(self):
 		'''Get available sample rate combinations for the current performance level and channel combination.'''
@@ -249,6 +263,32 @@ class Saleae():
 				digital, analog = list(map(int, map(str.strip, line.split(','))))
 				self.sample_rates.append((digital, analog))
 		return self.sample_rates
+
+	def get_bandwidth(self, sample_rate, device = None, channels = None):
+		'''Compute USB bandwidth for a given configuration.
+
+		Must supply sample_rate because Saleae API has no get_sample_rate method.'''
+		# From https://github.com/ppannuto/python-saleae/issues/8
+		# Bandwidth (bits per second) =
+		#   (digital_sample_rate * digital_channel_count) +
+		#   (analog_sample_rate * analog_channel_count * adc_width)
+		#
+		# ADC width = 12 bits for Logic 8, Pro 8 and Pro 16.
+		# ADC width = 8 bits for logic 4.
+		if device is None:
+			device = self.get_active_device()
+		if channels is None:
+			digital_channels, analog_channels = self.get_active_channels()
+		else:
+			digital_channels, analog_channels = channels
+
+		if device.type == 'LOGIC_4_DEVICE':
+			adc_width = 8
+		else:
+			adc_width = 12
+
+		return sample_rate[0] * len(digital_channels) +\
+		       sample_rate[1] * len(analog_channels) * adc_width
 
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
@@ -288,6 +328,13 @@ class Saleae():
 				index, name, type, id = list(map(str.strip, dev.split(',')))
 			self.connected_devices.append(ConnectedDevice(type, name, id, index, active))
 		return self.connected_devices
+
+	def get_active_device(self):
+		self.get_connected_devices()
+		for dev in self.connected_devices:
+			if dev.active:
+				return dev
+		raise NotImplementedError("No active device?")
 
 	def select_active_device(self, device_index):
 		if self.connected_devices is None:
