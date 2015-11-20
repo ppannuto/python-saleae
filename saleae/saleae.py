@@ -526,11 +526,29 @@ class Saleae():
 
 
 	def get_analyzers(self):
-		raise NotImplementedError
-	def export_analyzers(self):
-		raise NotImplementedError
+		'''Return a list of analyzers currently in use, with indexes.'''
+		reply = self._cmd('GET_ANALYZERS')
+		self.analyzers = []
+		for line in reply.split('\n'):
+			if len(line):
+				analyzer_name = line.split(',')[0]
+				analyzer_index = int(line.split(',')[1])
+				self.analyzers.append((analyzer_name, analyzer_index))
+		return self.analyzers
+
+	def export_analyzer(self, analyzer_index, save_path):
+		'''Export analyzer index N and save to absolute path save_path. The analyzer must be finished processing'''
+		self._build('EXPORT_ANALYZER')
+		self._build(str(analyzer_index))
+		self._build(save_path)
+		resp = self._finish()
+
 	def is_analyzer_complete(self, analyzer_index):
-		raise NotImplementedError
+		'''check to see if analyzer with index N has finished processing.'''
+		self._build('IS_ANALYZER_COMPLETE')
+		self._build(str(analyzer_index))
+		resp = self._finish()
+		return resp.strip().upper() == 'TRUE'
 
 
 def demo(host='localhost', port=10429):
