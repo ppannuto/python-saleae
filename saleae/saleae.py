@@ -536,8 +536,11 @@ class Saleae():
 				self.analyzers.append((analyzer_name, analyzer_index))
 		return self.analyzers
 
-	def export_analyzer(self, analyzer_index, save_path):
+	def export_analyzer(self, analyzer_index, save_path, wait_for_processing=True):
 		'''Export analyzer index N and save to absolute path save_path. The analyzer must be finished processing'''
+		if wait_for_processing:
+			while not self.is_analyzer_complete(analyzer_index):
+				time.sleep(0.1)
 		self._build('EXPORT_ANALYZER')
 		self._build(str(analyzer_index))
 		self._build(save_path)
