@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 # vim: tw=80 ts=4 sts=4 sw=4 smarttab noet
 
-
-# Coerce Py2k to act more like Py3k
-# https://pypi.python.org/pypi/future
-
-from __future__ import (absolute_import, division, print_function, unicode_literals)
-from builtins import (bytes, dict, int, list, object, range, str, ascii, chr,
-		hex, input, next, oct, open, pow, round, super, filter, map, zip)
-
-
 import logging
 log = logging.getLogger(__name__)
 #logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +11,11 @@ import os
 import socket
 import sys
 import time
+
+if sys.version_info[0] == 2:
+    # if we're running in 2.7 redefine some things
+    ConnectionRefusedError = socket.error
+    input = raw_input
 
 @enum.unique
 class Trigger(enum.IntEnum):
@@ -106,7 +102,17 @@ class Saleae():
 
 	def _send(self, s):
 		log.debug("Send >{}<".format(s))
-		self._s.send(bytes(s + '\0', 'UTF-8'))
+		# necessary for Python 2.7 compatibility. Since Python 3 moved
+		# to all unicode the bytes() function was added and required an
+		# `encoding` parameter. The `bytes()` function was backported to
+		# Python 2.7 but curiously, doesn't do the same thing. The line in
+		# the except block is the functional equivalent for this case
+		try:
+			byte_packet = bytes(s + '\0', 'UTF-8')
+		except TypeError:
+			byte_packet = str(bytearray(s + '\0')).encode('UTF-8')
+
+		self._s.send(byte_packet)
 
 	def _recv(self):
 		while 'ACK' not in self._rxbuf:
@@ -124,6 +130,8 @@ class Saleae():
 		ret = None
 		if wait_for_ack:
 			ret = self._recv()
+			if sys.version_info[0] == 2:
+				ret = ret.encode('UTF-8')
 		return ret
 
 	def set_trigger_one_channel(self, digital_channel, trigger):
