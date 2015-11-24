@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 # vim: tw=80 ts=4 sts=4 sw=4 smarttab noet
 
+
+# Coerce Py2k to act more like Py3k
+# https://pypi.python.org/pypi/future
+
+from __future__ import (absolute_import, division, print_function, unicode_literals)
+from builtins import (bytes, dict, int, list, object, range, str, ascii, chr,
+		hex, input, next, oct, open, pow, round, super, filter, map, zip)
+
+
 import logging
 log = logging.getLogger(__name__)
 #logging.basicConfig(level=logging.DEBUG)
