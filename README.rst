@@ -50,7 +50,7 @@ Usage
 
     import saleae
     s = saleae.Saleae()
-    s.capture_to_file('~/test.logicdata')
+    s.capture_to_file('/tmp/test.logicdata')
 
 
 .. |docs| image:: https://readthedocs.org/projects/python-saleae/badge/?version=latest
