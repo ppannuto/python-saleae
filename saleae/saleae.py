@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# vim: tw=80 ts=4 sts=4 sw=4 smarttab noet
 
 import logging
 log = logging.getLogger(__name__)
