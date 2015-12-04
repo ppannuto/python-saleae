@@ -21,6 +21,12 @@ import socket
 import sys
 import time
 
+# Py2k compat. This isn't actually 1:1, but is sufficient for our purposes
+try:
+	ConnectionRefusedError
+except NameError:
+	ConnectionRefusedError = socket.error
+
 @enum.unique
 class Trigger(enum.IntEnum):
 	# Python convention is to start enums at 1 for truth checks, but it
