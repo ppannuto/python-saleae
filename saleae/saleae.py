@@ -467,7 +467,7 @@ class Saleae():
 		self._build(file_path_on_target_machine)
 		if (digital_channels is None) and (analog_channels is None):
 			self._build('all_channels')
-			analog_channels = self.get_active_channels(self)[1]
+			analog_channels = self.get_active_channels()[1]
 		else:
 			if digital_channels is not None and len(digital_channels):
 				self._build('digital_channels')
