@@ -429,7 +429,7 @@ class Saleae():
 		self._cmd('SAVE_TO_FILE, ' + file_path_on_target_machine)
 
 	def load_from_file(self, file_path_on_target_machine):
-		self._cmd('LOAD_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('LOAD_FROM_FILE, ' + file_path_on_target_machine)
 
 	def close_all_tabs(self):
 		self._cmd('CLOSE_ALL_TABS')
