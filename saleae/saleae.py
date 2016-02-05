@@ -114,22 +114,25 @@ class Saleae():
 		log.debug("Send >{}<".format(s))
 		self._s.send(bytes(s + '\0', 'UTF-8'))
 
-	def _recv(self):
+	def _recv(self, expect_nak=False):
 		while 'ACK' not in self._rxbuf:
 			self._rxbuf += self._s.recv(1024).decode('UTF-8')
 			log.debug("Recv >{}<".format(self._rxbuf))
 			if 'NAK' == self._rxbuf[0:3]:
 				self._rxbuf = self._rxbuf[3:]
-				raise self.CommandNAKedError
+				if expect_nak:
+					return None
+				else:
+					raise self.CommandNAKedError
 		ret, self._rxbuf = self._rxbuf.split('ACK', 1)
 		return ret
 
-	def _cmd(self, s, wait_for_ack=True):
+	def _cmd(self, s, wait_for_ack=True, expect_nak=False):
 		self._send(s)
 
 		ret = None
 		if wait_for_ack:
-			ret = self._recv()
+			ret = self._recv(expect_nak=expect_nak)
 		return ret
 
 	def set_trigger_one_channel(self, digital_channel, trigger):
@@ -420,7 +423,9 @@ class Saleae():
 		raise NotImplementedError("Saleae temporarily dropped this command")
 
 	def is_processing_complete(self):
-		resp = self._cmd('IS_PROCESSING_COMPLETE')
+		resp = self._cmd('IS_PROCESSING_COMPLETE', expect_nak=True)
+		if resp is None:
+			return False
 		return resp.strip().upper() == 'TRUE'
 
 	def save_to_file(self, file_path_on_target_machine):
