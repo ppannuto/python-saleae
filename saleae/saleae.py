@@ -385,7 +385,7 @@ class Saleae():
 		digital_no = 0 if digital is None else len(digital)
 		analog_no = 0 if analog is None else len(analog)
 		if digital_no <= 0 and analog_no <= 0:
-			raise ValueError('bad active channels, has to set at least one active channel')
+			raise ImpossibleSettings('Logic requires at least one activate channel (digital or analog) and none are given')
 
 		# TODO Enforce "Note: This feature is only supported on Logic 16,
 		# Logic 8(2nd gen), Logic Pro 8, and Logic Pro 16"
@@ -451,7 +451,8 @@ class Saleae():
 		'''Binary analog: [VOLTAGE|ADC]'''
 
 		# Do argument verification
-		if analog_format.lower() not in ['voltage', 'adc']: raise ValueError('bad binary analog format')
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise ImpossibleSettings('Unsupported binary analog format')
 
 		# Build arguments
 		self._build(analog_format.upper())
@@ -460,38 +461,45 @@ class Saleae():
 	def _export_data_digital_binary(self, each_sample=True, no_shift=True, word_size=16):
 		'''Binary digital: [EACH_SAMPLE|ON_CHANGE], [NO_SHIFT|RIGHT_SHIFT], [8|16|32|64]'''
 		# Do argument verification
-		if word_size not in [8, 16, 32, 64]: raise ValueError('bad binary word size')
+		if word_size not in [8, 16, 32, 64]:
+			raise ImpossibleSettings('Unsupported binary word size')
 
 		# Build arguments
 		self._build('EACH_SAMPLE' if each_sample else 'ON_CHANGE')
 		self._build('NO_SHIFT' if no_shift else 'RIGHT_SHIFT')
 		self._build(str(word_size))
 
-	def _export_data_analog_csv(self, column_headers=True, delimeter='comma', display_base='hex', analog_format='voltage'):
+	def _export_data_analog_csv(self, column_headers=True, delimiter='comma', display_base='hex', analog_format='voltage'):
 		'''CVS export analog/mixed: [HEADERS|NO_HEADERS], [COMMA|TAB], [BIN|DEC|HEX|ASCII], [VOLTAGE|ADC]'''
 
 		# Do argument verification
-		if delimeter.lower() not in ['comma', 'tab']: raise ValueError('bad CSV delimeter')
-		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii']: raise ValueError('bad CSV display base')
-		if analog_format.lower() not in ['voltage', 'adc']: raise ValueError('bad CSV analog format')
+		if delimiter.lower() not in ['comma', 'tab']:
+			raise ImpossibleSettings('Unsupported CSV delimiter')
+		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii']:
+			raise ImpossibleSettings('Unsupported CSV display base')
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise ImpossibleSettings('Unsupported CSV analog format')
 
 		# Build arguments
 		self._build('HEADERS' if column_headers else 'NO_HEADERS')
-		self._build(delimeter.upper())
+		self._build(delimiter.upper())
 		self._build(display_base.upper())
 		self._build(analog_format.upper())
 
-	def _export_data_digital_csv(self, column_headers=True, delimeter='comma', timestamp='time_stamp', display_base='hex', rows_per_change=True):
+	def _export_data_digital_csv(self, column_headers=True, delimiter='comma', timestamp='time_stamp', display_base='hex', rows_per_change=True):
 		'''CVS export digital: [HEADERS|NO_HEADERS], [COMMA|TAB], [TIME_STAMP|SAMPLE_NUMBER], [COMBINED, [BIN|DEC|HEX|ASCII]|SEPARATE], [ROW_PER_CHANGE|ROW_PER_SAMPLE]'''
 
 		# Do argument verification
-		if delimeter.lower() not in ['comma', 'tab']: raise ValueError('bad CSV delimeter')
-		if timestamp.lower() not in ['time_stamp', 'sample_number']: raise ValueError('bad CSV timestamp')
-		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii', 'separate']: raise ValueError('bad CSV display base')
+		if delimiter.lower() not in ['comma', 'tab']:
+			raise ImpossibleSettings('Unsupported CSV delimiter')
+		if timestamp.lower() not in ['time_stamp', 'sample_number']:
+			raise ImpossibleSettings('Unsupported timestamp setting')
+		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii', 'separate']:
+			raise ImpossibleSettings('Unsupported CSV display base')
 
 		# Build arguments
 		self._build('HEADERS' if column_headers else 'NO_HEADERS')
-		self._build(delimeter.upper())
+		self._build(delimiter.upper())
 		self._build(timestamp.upper())
 		self._build('SEPERATE' if display_base.lower() == 'SEPERATE' else ['COMBINED', display_base.upper()])
 		self._build('ROW_PER_CHANGE' if rows_per_change else 'ROW_PER_SAMPLE')
@@ -504,7 +512,8 @@ class Saleae():
 		'''Matlab analog: [VOLTAGE|ADC]'''
 
 		# Do argument verification
-		if analog_format.lower() not in ['voltage', 'adc']: raise ValueError('bad Matlab analog format')
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise ImpossibleSettings('Unsupported Matlab analog format')
 
 		# Build arguments
 		self._build(analog_format.upper())
@@ -525,7 +534,7 @@ class Saleae():
 		while not self.is_processing_complete():
 			time.sleep(1)
 
-		# Saleae Logic should resolve relative paths, I do not see reasons not to do this ...
+		# NOTE: Note to Saleae, Logic should resolve relative paths, I do not see reasons not to do this ...
 		if file_path_on_target_machine[0] in ('~', '.'):
 			raise ValueError('File path must be absolute')
 
@@ -558,22 +567,19 @@ class Saleae():
 		elif len(time_span) == 2:
 			self._build(['TIME_SPAN', '{0:f}'.format(time_span[0]), '{0:f}'.format(time_span[0])])
 		else:
-			raise ValueError('bad time span given')
+			raise ImpossibleSettings('Unsupported time span')
 
 		# Find exporter
 		export_name = '_export_data_{0:s}_{1:s}'.format('analog' if is_analog else 'digital', format.lower())
 		if not hasattr(self, export_name):
-			raise NotImplementedError('bad export format given ({0:s})'.format(export_name))
+			raise NotImplementedError('Unsupported export format given ({0:s})'.format(export_name))
 
 		# Let specific export function handle arguments
 		self._build(format.upper())
 		getattr(self, export_name)(**export_args)
 
-		# Done, return self for chainability
 		self._finish()
-		time.sleep(0.050) # HACK: Delete me if Saleae Logic does not contain raise condition anymore
-		return self
-
+		time.sleep(0.050) # HACK: Delete me when Logic (saleae) race conditions are fixed
 
 	def get_analyzers(self):
 		'''Return a list of analyzers currently in use, with indexes.'''
