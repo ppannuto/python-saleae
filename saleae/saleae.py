@@ -370,6 +370,8 @@ class Saleae():
 
 		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively'''
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
+		# Work around possible bug in Logic8
+		# https://github.com/ppannuto/python-saleae/pull/19
 		while ('TRUE' == channels):
 			time.sleep(0.1)
 			channels = self._cmd('GET_ACTIVE_CHANNELS')
