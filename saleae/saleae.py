@@ -370,6 +370,9 @@ class Saleae():
 
 		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively'''
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
+		while ('TRUE' == channels):
+			time.sleep(0.1)
+			channels = self._cmd('GET_ACTIVE_CHANNELS')
 		msg = list(map(str.strip, channels.split(',')))
 		assert msg.pop(0) == 'digital_channels'
 		i = msg.index('analog_channels')
