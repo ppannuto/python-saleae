@@ -1,7 +1,7 @@
 python-saleae
 =============
 
-|docs|
+|travisci| |docs|
 
 This library implements the control protocol for the
 `Saleae Logic Analyzer <https://www.saleae.com/>`__. It is based off of the
@@ -58,3 +58,6 @@ Usage
     :scale: 100%
     :target: https://python-saleae.readthedocs.org/
 
+.. |travisci| image:: https://travis-ci.org/ppannuto/python-saleae.svg?branch=master
+    :alt: Build Status
+    :target: https://travis-ci.org/ppannuto/python-saleae
