@@ -1,0 +1,28 @@
+sudo: false
+language: python
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
+  - "wget 'http://downloads.saleae.com/logic/1.2.10/Logic%201.2.10%20(64-bit).zip'"
+  - 'unzip Logic\ 1.2.10\ \(64-bit\).zip'
+
+install:
+  - pip install tox-travis
+
+script:
+  - 'Logic\ 1.2.10\ \(64-bit\)/Logic & LOGIC_PID=$!' # Need to run once for settings file to exist
+  - "sleep 10s"
+  - "kill $LOGIC_PID"
+  - "sleep 2s"
+  - 'sed -i "s:mEnableSocketServer>0:mEnableSocketServer>1:" Logic\ 1.2.10\ \(64-bit\)/Settings/settings.xml'
+  - 'Logic\ 1.2.10\ \(64-bit\)/Logic & LOGIC_PID=$!'
+  - tox
+

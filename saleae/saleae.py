@@ -100,12 +100,14 @@ class Saleae():
 	def _finish(self, s=None):
 		if s:
 			self._build(s)
-		ret = self._cmd(', '.join(self._to_send))
-		self._to_send = []
+		try:
+			ret = self._cmd(', '.join(self._to_send))
+		finally:
+			self._to_send = []
 		return ret
 
 	def _round_up_or_max(self, value, candidates):
-		i = bisect.bisect_left(value, candidates)
+		i = bisect.bisect_left(candidates, value)
 		if i == len(candidates):
 			i -= 1
 		return candidates[i]
@@ -195,6 +197,8 @@ class Saleae():
 		*From Saleae documentation*
 		  Note: USB transfer chunks are about 33ms of data so the number of
 		  samples you actually get are in steps of 33ms.
+
+		>>> s.set_num_samples(1e6)
 		'''
 		self._cmd('SET_NUM_SAMPLES, {:d}'.format(int(samples)))
 
@@ -202,6 +206,8 @@ class Saleae():
 		'''Set the capture duration to a length of time.
 
 		:param seconds: Capture length. Partial seconds (floats) are fine.
+
+		>>> s.set_capture_seconds(1)
 		'''
 		self._cmd('SET_CAPTURE_SECONDS, {}'.format(float(seconds)))
 
@@ -215,6 +221,8 @@ class Saleae():
 		channel configuration before attempting to set the sample rate.
 
 		:param sample_rate_tuple: A sample rate as returned from ``get_all_sample_rates``
+
+		>>> s.set_sample_rate(s.get_all_sample_rates()[0])
 		'''
 
 		self.get_all_sample_rates()
@@ -236,6 +244,9 @@ class Saleae():
 		:param analog_minimum: Minimum analog sampling rate in samples/sec or 0 for don't care
 		:returns (digital_rate, analog_rate): the sample rate that was set
 		:raises ImpossibleSettings: rasied if sample rate cannot be met
+
+		>>> s.set_sample_rate_by_minimum(1e6, 1)
+		(12000000, 10)
 		'''
 
 		if digital_minimum == analog_minimum == 0:
@@ -274,7 +285,11 @@ class Saleae():
 		return best_rate
 
 	def get_all_sample_rates(self):
-		'''Get available sample rate combinations for the current performance level and channel combination.'''
+		'''Get available sample rate combinations for the current performance level and channel combination.
+
+		>>> s.get_all_sample_rates()
+		[(12000000, 6000000), (12000000, 125000), (12000000, 5000), (12000000, 1000), (12000000, 100), (12000000, 10), (12000000, 0), (6000000, 0), (3000000, 0), (1000000, 0)]
+		'''
 		rates = self._cmd('GET_ALL_SAMPLE_RATES')
 		self.sample_rates = []
 		for line in rates.split('\n'):
@@ -286,7 +301,11 @@ class Saleae():
 	def get_bandwidth(self, sample_rate, device = None, channels = None):
 		'''Compute USB bandwidth for a given configuration.
 
-		Must supply sample_rate because Saleae API has no get_sample_rate method.'''
+		Must supply sample_rate because Saleae API has no get_sample_rate method.
+
+		>>> s.get_bandwidth(s.get_all_sample_rates()[0])
+		96000000
+		'''
 		# From https://github.com/ppannuto/python-saleae/issues/8
 		# Bandwidth (bits per second) =
 		#   (digital_sample_rate * digital_channel_count) +
@@ -312,23 +331,51 @@ class Saleae():
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
 
-		:returns: A ``saleae.PerformanceOption``'''
-		return PerformanceOption(int(self._cmd("GET_PERFORMANCE")))
+		:returns: A ``saleae.PerformanceOption``
+
+		>>> s.get_performance() #doctest:+SKIP
+		<PerformanceOption.Full: 100>
+		'''
+		try:
+			return PerformanceOption(int(self._cmd("GET_PERFORMANCE")))
+		except self.CommandNAKedError:
+			log.warn("get_performance is only supported when a physical Saleae device is attached if")
+			log.warn("                you are testing / do not have a Saleae attached this will fail.")
+			raise
 
 	def set_performance(self, performance):
 		'''Set performance value. Performance controls USB traffic and quality.
 
 		:param performance: must be of type saleae.PerformanceOption
 
-		**Note: This will change the sample rate.**'''
+		**Note: This will change the sample rate.**
+
+		#>>> s.set_performance(saleae.PerformanceOption.Full)
+		'''
 		# Ensure this is a valid setting
 		performance = PerformanceOption(performance)
-		self._cmd('SET_PERFORMANCE, {}'.format(performance.value))
+		try:
+			self._cmd('SET_PERFORMANCE, {}'.format(performance.value))
+		except self.CommandNAKedError:
+			log.warn("set_performance is only supported when a physical Saleae device is attached if")
+			log.warn("                you are testing / do not have a Saleae attached this will fail.")
+			raise
 
 	def get_capture_pretrigger_buffer_size(self):
+		'''The number of samples saleae records before the trigger.
+
+		:returns: An integer number descripting the pretrigger buffer size
+
+		>>> s.get_capture_pretrigger_buffer_size() #doctest:+ELLIPSIS
+		1...
+		'''
 		return int(self._cmd('GET_CAPTURE_PRETRIGGER_BUFFER_SIZE'))
 
 	def set_capture_pretrigger_buffer_size(self, size, round=True):
+		'''Set the number of samples saleae records before the trigger.
+
+		>>> s.set_capture_pretrigger_buffer_size(1e6)
+		'''
 		valid_sizes = (1000000, 10000000, 100000000, 1000000000)
 		if round:
 			size = self._round_up_or_max(size, valid_sizes)
@@ -337,6 +384,17 @@ class Saleae():
 		self._cmd('SET_CAPTURE_PRETRIGGER_BUFFER_SIZE, {}'.format(size))
 
 	def get_connected_devices(self):
+		'''Get a list of attached Saleae devices.
+
+		Note, this will never be an empty list. If no actual Saleae devices are
+		connected, then Logic will return the four fake devices shown in the
+		example.
+
+		:returns: A list of ``saleae.ConnectedDevice`` objects
+
+		>>> s.get_connected_devices() #doctest:+ELLIPSIS
+		[<saleae.ConnectedDevice #1 LOGIC_4_DEVICE Logic 4 (...) **ACTIVE**>, <saleae.ConnectedDevice #2 LOGIC_8_DEVICE Logic 8 (...)>, <saleae.ConnectedDevice #3 LOGIC_PRO_8_DEVICE Logic Pro 8 (...)>, <saleae.ConnectedDevice #4 LOGIC_PRO_16_DEVICE Logic Pro 16 (...)>]
+		'''
 		devices = self._cmd('GET_CONNECTED_DEVICES')
 		self.connected_devices = []
 		for dev in devices.split('\n')[:-1]:
@@ -349,6 +407,13 @@ class Saleae():
 		return self.connected_devices
 
 	def get_active_device(self):
+		'''Get the current active Saleae device.
+
+		:returns: A ``saleae.ConnectedDevice`` object for the active Saleae
+
+		>>> s.get_active_device() #doctest:+ELLIPSIS
+		<saleae.ConnectedDevice #1 LOGIC_4_DEVICE Logic 4 (...) **ACTIVE**>
+		'''
 		self.get_connected_devices()
 		for dev in self.connected_devices:
 			if dev.active:
@@ -356,6 +421,12 @@ class Saleae():
 		raise NotImplementedError("No active device?")
 
 	def select_active_device(self, device_index):
+		'''
+		>>> s.select_active_device(2)
+		>>> s.get_active_device() #doctest:+ELLIPSIS
+		<saleae.ConnectedDevice #2 LOGIC_8_DEVICE Logic 8 (...) **ACTIVE**>
+		>>> s.select_active_device(1)
+		'''
 		if self.connected_devices is None:
 			self.get_connected_devices()
 		for dev in self.connected_devices:
@@ -368,7 +439,11 @@ class Saleae():
 	def get_active_channels(self):
 		'''Get the active digital and analog channels.
 
-		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively'''
+		:returns: A 2-tuple of lists of integers, the active digital and analog channels respectively
+
+		>>> s.get_active_channels()
+		([0, 1, 2, 3], [0])
+		'''
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		# Work around possible bug in Logic8
 		# https://github.com/ppannuto/python-saleae/pull/19
@@ -383,9 +458,18 @@ class Saleae():
 
 		return digital, analog
 
-	def set_active_channels(self, digital, analog):
-		# TODO Enforce "Note: This feature is only supported on Logic 16,
-		# Logic 8(2nd gen), Logic Pro 8, and Logic Pro 16"
+	def set_active_channels(self, digital=None, analog=None):
+		'''Set the active digital and analog channels.
+
+		*Note: This feature is only supported on Logic 16, Logic 8(2nd gen),
+		Logic Pro 8, and Logic Pro 16*
+
+		>>> s.set_active_channels([0,1,2,3], [0]) #doctest:+SKIP
+		'''
+		# TODO Enfore note from docstring
+		if digital is None and analog is None:
+			raise self.ImpossibleSettings("At least one digital or analog channel must be set")
+
 		self._build('SET_ACTIVE_CHANNELS')
 		self._build('digital_channels')
 		for ch in digital:
@@ -396,7 +480,10 @@ class Saleae():
 		self._finish()
 
 	def reset_active_channels(self):
-		'''Set all channels to active.'''
+		'''Set all channels to active.
+
+		>>> s.reset_active_channels()
+		'''
 		self._cmd('RESET_ACTIVE_CHANNELS')
 
 	def capture_start(self):
@@ -404,6 +491,13 @@ class Saleae():
 		self._cmd('CAPTURE', False)
 
 	def capture_start_and_wait_until_finished(self):
+		'''Convenience method that blocks until capture is complete.
+
+		>>> s.set_capture_seconds(.5)
+		>>> s.capture_start_and_wait_until_finished()
+		>>> s.is_processing_complete()
+		True
+		'''
 		self.capture_start()
 		while not self.is_processing_complete():
 			time.sleep(0.1)
@@ -412,6 +506,12 @@ class Saleae():
 		'''Stop a capture and return whether any data was captured.
 
 		:returns: True if any data collected, False otherwise
+
+		>>> s.set_capture_seconds(5)
+		>>> s.capture_start()
+		>>> time.sleep(1)
+		>>> s.capture_stop()
+		True
 		'''
 		try:
 			self._cmd('STOP_CAPTURE')
@@ -654,3 +754,24 @@ def demo(host='localhost', port=10429):
 
 if __name__ == '__main__':
 	demo()
+
+
+
+## Support bits for doctests:
+
+# n.b. DocTestRunner is an old-style class so no super for py2k compat
+import doctest
+_original_runner = doctest.DocTestRunner
+class CustomRunner(_original_runner):
+	def __init__(self, *args, **kwargs):
+		_original_runner.__init__(self, *args, **kwargs)
+
+		self._saleae = Saleae()
+
+	def run(self, test, *args, **kwargs):
+		test.globs['s'] = self._saleae
+		return _original_runner.run(self, test, *args, **kwargs)
+
+def setup_module(module):
+	doctest.DocTestRunner = CustomRunner
+
