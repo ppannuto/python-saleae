@@ -6,7 +6,7 @@ python-saleae
 This library implements the control protocol for the
 `Saleae Logic Analyzer <https://www.saleae.com/>`__. It is based off of the
 documentation and example here:
-http://support.saleae.com/hc/en-us/articles/201104764-Socket-API-beta
+https://github.com/saleae/SaleaeSocketApi
 
 **IMPORTANT: You must enable the 'Remote Scripting Server' in Saleae.** Click
 on "Options" in the top-right, the "Developer" tab, and check "Enable scripting
