@@ -16,10 +16,12 @@ log = logging.getLogger(__name__)
 
 import bisect
 import enum
+import inspect
 import os
 import socket
 import sys
 import time
+import warnings
 
 # Py2k compat. This isn't actually 1:1, but is sufficient for our purposes
 try:
@@ -568,6 +570,12 @@ class Saleae():
 		# export_data, C:\temp_file, digital_channels, 0, 1, analog_channels, 1, voltage, all_time, adc, csv, headers, comma, time_stamp, separate, row_per_change, Dec
 		# export_data, C:\temp_file, all_channels, time_span, 0.2, 0.4, vcd
 		# export_data, C:\temp_file, analog_channels, 0, 1, 2, adc, all_time, matlab
+
+		frame = inspect.currentframe().f_back
+		warnings.warn_explicit('export_data is deprecated, use export_data2',
+				category=UserWarning, # DeprecationWarning suppressed by default
+				filename=inspect.getfile(frame.f_code),
+				lineno=frame.f_lineno)
 
 		while not self.is_processing_complete():
 			time.sleep(1)
