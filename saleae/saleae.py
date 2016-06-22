@@ -467,16 +467,18 @@ class Saleae():
 		>>> s.set_active_channels([0,1,2,3], [0]) #doctest:+SKIP
 		'''
 		# TODO Enfore note from docstring
-		if digital is None and analog is None:
-			raise self.ImpossibleSettings("At least one digital or analog channel must be set")
+		digital_no = 0 if digital is None else len(digital)
+		analog_no = 0 if analog is None else len(analog)
+		if digital_no <= 0 and analog_no <= 0:
+			raise self.ImpossibleSettings('Logic requires at least one activate channel (digital or analog) and none are given')
 
 		self._build('SET_ACTIVE_CHANNELS')
-		self._build('digital_channels')
-		for ch in digital:
-			self._build('{}'.format(ch))
-		self._build('analog_channels')
-		for ch in analog:
-			self._build('{}'.format(ch))
+		if digital_no > 0:
+			self._build('digital_channels')
+			self._build(['{0:d}'.format(ch) for ch in digital])
+		if analog_no > 0:
+			self._build('analog_channels')
+			self._build(['{0:d}'.format(ch) for ch in analog])
 		self._finish()
 
 	def reset_active_channels(self):
