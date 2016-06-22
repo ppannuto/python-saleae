@@ -92,7 +92,10 @@ class Saleae():
 
 	def _build(self, s):
 		'''Convenience method for building up a command to send'''
-		self._to_send.append(s)
+		if type(s) is list:
+			self._to_send.extend(s)
+		else:
+			self._to_send.append(s)
 
 	def _abort(self):
 		self._to_send = []
@@ -651,6 +654,146 @@ class Saleae():
 			raise NotImplementedError('unknown format')
 
 		self._finish()
+
+
+	def _export_data2_analog_binary(self, analog_format='voltage'):
+		'''Binary analog: [VOLTAGE|ADC]'''
+
+		# Do argument verification
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise self.ImpossibleSettings('Unsupported binary analog format')
+
+		# Build arguments
+		self._build(analog_format.upper())
+
+	# NOTE: the [EACH_SAMPLE|ON_CHANGE] is the same as the CSV [ROW_PER_CHANGE|ROW_PER_SAMPLE], but I am using name convention from official C# API
+	def _export_data2_digital_binary(self, each_sample=True, no_shift=True, word_size=16):
+		'''Binary digital: [EACH_SAMPLE|ON_CHANGE], [NO_SHIFT|RIGHT_SHIFT], [8|16|32|64]'''
+		# Do argument verification
+		if word_size not in [8, 16, 32, 64]:
+			raise self.ImpossibleSettings('Unsupported binary word size')
+
+		# Build arguments
+		self._build('EACH_SAMPLE' if each_sample else 'ON_CHANGE')
+		self._build('NO_SHIFT' if no_shift else 'RIGHT_SHIFT')
+		self._build(str(word_size))
+
+	def _export_data2_analog_csv(self, column_headers=True, delimiter='comma', display_base='hex', analog_format='voltage'):
+		'''CVS export analog/mixed: [HEADERS|NO_HEADERS], [COMMA|TAB], [BIN|DEC|HEX|ASCII], [VOLTAGE|ADC]'''
+
+		# Do argument verification
+		if delimiter.lower() not in ['comma', 'tab']:
+			raise self.ImpossibleSettings('Unsupported CSV delimiter')
+		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii']:
+			raise self.ImpossibleSettings('Unsupported CSV display base')
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise self.ImpossibleSettings('Unsupported CSV analog format')
+
+		# Build arguments
+		self._build('HEADERS' if column_headers else 'NO_HEADERS')
+		self._build(delimiter.upper())
+		self._build(display_base.upper())
+		self._build(analog_format.upper())
+
+	def _export_data2_digital_csv(self, column_headers=True, delimiter='comma', timestamp='time_stamp', display_base='hex', rows_per_change=True):
+		'''CVS export digital: [HEADERS|NO_HEADERS], [COMMA|TAB], [TIME_STAMP|SAMPLE_NUMBER], [COMBINED, [BIN|DEC|HEX|ASCII]|SEPARATE], [ROW_PER_CHANGE|ROW_PER_SAMPLE]'''
+
+		# Do argument verification
+		if delimiter.lower() not in ['comma', 'tab']:
+			raise self.ImpossibleSettings('Unsupported CSV delimiter')
+		if timestamp.lower() not in ['time_stamp', 'sample_number']:
+			raise self.ImpossibleSettings('Unsupported timestamp setting')
+		if display_base.lower() not in ['bin', 'dec', 'hex', 'ascii', 'separate']:
+			raise self.ImpossibleSettings('Unsupported CSV display base')
+
+		# Build arguments
+		self._build('HEADERS' if column_headers else 'NO_HEADERS')
+		self._build(delimiter.upper())
+		self._build(timestamp.upper())
+		self._build('SEPERATE' if display_base.lower() == 'SEPERATE' else ['COMBINED', display_base.upper()])
+		self._build('ROW_PER_CHANGE' if rows_per_change else 'ROW_PER_SAMPLE')
+
+	def _export_data2_digital_vcd(self):
+		'''VCD digital: no arguments'''
+		pass
+
+	def _export_data2_analog_matlab(self, analog_format='voltage'):
+		'''Matlab analog: [VOLTAGE|ADC]'''
+
+		# Do argument verification
+		if analog_format.lower() not in ['voltage', 'adc']:
+			raise self.ImpossibleSettings('Unsupported Matlab analog format')
+
+		# Build arguments
+		self._build(analog_format.upper())
+
+	def _export_data2_digital_matlab(self):
+		'''Matlab digital: no arguments'''
+		pass
+
+
+	def export_data2(self, file_path_on_target_machine, digital_channels=None, analog_channels=None, time_span=None, format='csv', **export_args):
+		'''Export command:
+			EXPORT_DATA2,
+			<filename>,
+			[ALL_CHANNELS|SPECIFIC_CHANNELS, [DIGITAL_ONLY|ANALOG_ONLY|ANALOG_AND_DIGITAL], <channel index> [ANALOG|DIGITAL], ..., <channel index> [ANALOG|DIGITAL]],
+			[ALL_TIME|TIME_SPAN, <(double)start>, <(double)end>],
+			[BINARY, <binary settings>|CSV, <csv settings>|VCD|MATLAB, <matlab settings>]
+
+		>>> s.export_data2('/tmp/test.csv')
+		'''
+		while not self.is_processing_complete():
+			time.sleep(1)
+
+		# NOTE: Note to Saleae, Logic should resolve relative paths, I do not see reasons not to do this ...
+		if file_path_on_target_machine[0] in ('~', '.'):
+			raise ValueError('File path must be absolute')
+
+		self._build('EXPORT_DATA2')
+		self._build(file_path_on_target_machine)
+
+		# Channel selection
+		is_analog = False
+		if (digital_channels is None) and (analog_channels is None):
+			self._build('ALL_CHANNELS')
+			is_analog = len(self.get_active_channels()[1]) > 0
+		else:
+			self._build('SPECIFIC_CHANNELS')
+			# Check for mixed mode
+			# NOTE: This feels redundant, we can see if digital only, analog
+			# only or mixed from parsing the channels right?!  especially given
+			# the fact that only ANALOG_AND_DIGITAL is printed and never
+			# DIGITAL_ONLY or ANALOG_ONLY (according to Saleae C#
+			# implementation)
+			if digital_channels is not None and len(digital_channels) and analog_channels is not None and len(analog_channels):
+				self._build('ANALOG_AND_DIGITAL')
+
+			# Add in the channels
+			if digital_channels is not None and len(digital_channels):
+				self._build(['{0:d} DIGITAL'.format(ch) for ch in digital_channels])
+			if analog_channels is not None and len(analog_channels):
+				self._build(['{0:d} ANALOG'.format(ch) for ch in analog_channels])
+				is_analog = True
+
+		# Time selection
+		if time_span is None:
+			self._build('ALL_TIME')
+		elif len(time_span) == 2:
+			self._build(['TIME_SPAN', '{0:f}'.format(time_span[0]), '{0:f}'.format(time_span[0])])
+		else:
+			raise self.ImpossibleSettings('Unsupported time span')
+
+		# Find exporter
+		export_name = '_export_data2_{0:s}_{1:s}'.format('analog' if is_analog else 'digital', format.lower())
+		if not hasattr(self, export_name):
+			raise NotImplementedError('Unsupported export format given ({0:s})'.format(export_name))
+
+		# Let specific export function handle arguments
+		self._build(format.upper())
+		getattr(self, export_name)(**export_args)
+
+		self._finish()
+		time.sleep(0.050) # HACK: Delete me when Logic (saleae) race conditions are fixed
 
 
 	def get_analyzers(self):
