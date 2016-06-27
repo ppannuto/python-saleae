@@ -452,7 +452,7 @@ class Saleae():
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		# Work around possible bug in Logic8
 		# https://github.com/ppannuto/python-saleae/pull/19
-		while ('TRUE' == channels):
+		while not channels.startswith('digital_channels'):
 			time.sleep(0.1)
 			channels = self._cmd('GET_ACTIVE_CHANNELS')
 		msg = list(map(str.strip, channels.split(',')))
