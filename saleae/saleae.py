@@ -94,7 +94,7 @@ class Saleae():
 
 	def _build(self, s):
 		'''Convenience method for building up a command to send'''
-		if type(s) is list:
+		if isinstance(s, list):
 			self._to_send.extend(s)
 		else:
 			self._to_send.append(s)
