@@ -449,6 +449,12 @@ class Saleae():
 		>>> s.get_active_channels()
 		([0, 1, 2, 3], [0])
 		'''
+		# If an old Logic8 is connected this command does not work, but all 8
+		# digital channels are always active so return that.
+		device = self.get_active_device()
+		if device.type == "LOGIC_DEVICE":
+			return range(8), []
+
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		# Work around possible bug in Logic8
 		# https://github.com/ppannuto/python-saleae/pull/19
