@@ -821,7 +821,7 @@ class Saleae():
 				self.analyzers.append((analyzer_name, analyzer_index))
 		return self.analyzers
 
-	def export_analyzer(self, analyzer_index, save_path, wait_for_processing=True):
+	def export_analyzer(self, analyzer_index, save_path, wait_for_processing=True, data_response=False):
 		'''Export analyzer index N and save to absolute path save_path. The analyzer must be finished processing'''
 		if wait_for_processing:
 			while not self.is_analyzer_complete(analyzer_index):
@@ -829,7 +829,10 @@ class Saleae():
 		self._build('EXPORT_ANALYZER')
 		self._build(str(analyzer_index))
 		self._build(save_path)
+		if data_response:
+			self._build('data_response')  # any old extra parameter can be used
 		resp = self._finish()
+		return resp if data_response else None
 
 	def is_analyzer_complete(self, analyzer_index):
 		'''check to see if analyzer with index N has finished processing.'''
