@@ -401,6 +401,10 @@ class Saleae():
 		[<saleae.ConnectedDevice #1 LOGIC_4_DEVICE Logic 4 (...) **ACTIVE**>, <saleae.ConnectedDevice #2 LOGIC_8_DEVICE Logic 8 (...)>, <saleae.ConnectedDevice #3 LOGIC_PRO_8_DEVICE Logic Pro 8 (...)>, <saleae.ConnectedDevice #4 LOGIC_PRO_16_DEVICE Logic Pro 16 (...)>]
 		'''
 		devices = self._cmd('GET_CONNECTED_DEVICES')
+		while ('TRUE' == devices):
++			time.sleep(0.1)
++			devices = self._cmd('GET_CONNECTED_DEVICES')
+
 		self.connected_devices = []
 		for dev in devices.split('\n')[:-1]:
 			active = False
