@@ -402,8 +402,8 @@ class Saleae():
 		'''
 		devices = self._cmd('GET_CONNECTED_DEVICES')
 		while ('TRUE' == devices):
-+			time.sleep(0.1)
-+			devices = self._cmd('GET_CONNECTED_DEVICES')
+			time.sleep(0.1)
+			devices = self._cmd('GET_CONNECTED_DEVICES')
 
 		self.connected_devices = []
 		for dev in devices.split('\n')[:-1]:
