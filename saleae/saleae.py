@@ -728,7 +728,7 @@ class Saleae():
 		self._build('HEADERS' if column_headers else 'NO_HEADERS')
 		self._build(delimiter.upper())
 		self._build(timestamp.upper())
-		self._build('SEPERATE' if display_base.lower() == 'SEPERATE' else ['COMBINED', display_base.upper()])
+		self._build('SEPARATE' if display_base.upper() == 'SEPARATE' else ['COMBINED', display_base.upper()])
 		self._build('ROW_PER_CHANGE' if rows_per_change else 'ROW_PER_SAMPLE')
 
 	def _export_data2_digital_vcd(self):
