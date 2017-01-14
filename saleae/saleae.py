@@ -15,9 +15,11 @@ log = logging.getLogger(__name__)
 #logging.basicConfig(level=logging.DEBUG)
 
 import bisect
+import contextlib
 import enum
 import inspect
 import os
+import platform
 import psutil
 import socket
 import sys
@@ -77,6 +79,33 @@ class Saleae():
 		pass
 
 	@staticmethod
+	def launch_logic(timeout=5):
+		'''Attempts to open Saleae Logic software'''
+		if platform.system() == 'Darwin':
+			ret = os.system('open /Applications/Logic.app')
+			if ret != 0:
+				raise OSError("Failed to open Logic software")
+		elif platform.system() == 'Linux':
+			ret = os.system('Logic')
+			if ret != 0:
+				raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
+		elif platform.system() == 'Windows':
+			p = os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")
+			os.startfile(p)
+		else:
+			raise NotImplementedError("Unknown platform " + platform.system())
+
+		# Try to intelligently wait for Logic to be ready, but can't wait
+		# forever because user may not have enabled the scripting server
+		while timeout > 0:
+			with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+				if sock.connect_ex(('localhost', 10429)) == 0:
+					break
+			log.debug('launch_logic: port not yet open, sleeping 1s')
+			time.sleep(1)
+			timeout -= 1
+
+	@staticmethod
 	def kill_logic():
 		'''Attempts to find and kill running Saleae Logic software'''
 		# This is a bit experimental as I'm not sure what the process name will
@@ -102,8 +131,15 @@ class Saleae():
 		self.sample_rates = None
 		self.connected_devices = None
 
-		self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
+			self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self._s.connect((host, port))
+		except ConnectionRefusedError:
+			log.info("Could not connect to Logic software, attempting to launch it now")
+			Saleae.launch_logic()
+
+		try:
+			self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self._s.connect((host, port))
 		except ConnectionRefusedError:
 			print("Failed to connect to saleae at {}:{}".format(host, port))
