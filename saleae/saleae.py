@@ -18,6 +18,7 @@ import bisect
 import enum
 import inspect
 import os
+import psutil
 import socket
 import sys
 import time
@@ -74,6 +75,27 @@ class Saleae():
 
 	class ImpossibleSettings(SaleaeError):
 		pass
+
+	@staticmethod
+	def kill_logic():
+		'''Attempts to find and kill running Saleae Logic software'''
+		# This is a bit experimental as I'm not sure what the process name will
+		# be on every platform. For now, I'm making the hopefully reasonable and
+		# conservative assumption that if there's only one process running with
+		# 'logic' in the name, that it's Saleae Logic
+		candidates = []
+		for proc in psutil.process_iter():
+			try:
+				if 'logic' in proc.name().lower():
+					candidates.append(proc)
+			except psutil.NoSuchProcess:
+				pass
+		if len(candidates) == 0:
+			raise OSError("No logic process found")
+		if len(candidates) > 1:
+			raise NotImplementedError("Multiple candidates for logic software."
+					" Not sure which to kill: " + str(candidates))
+		candidates[0].terminate()
 
 	def __init__(self, host='localhost', port=10429):
 		self._to_send = []
