@@ -548,11 +548,13 @@ class Saleae():
 
 		self._build('SET_ACTIVE_CHANNELS')
 		if digital_no > 0:
+                        digital_ch = ['{0:d}'.format(ch) for ch in digital]
 			self._build('digital_channels')
-			self._build(['{0:d}'.format(ch) for ch in digital])
+			self._build(','.join(digital_ch))
 		if analog_no > 0:
+                        analog_ch = ['{0:d}'.format(ch) for ch in analog]
 			self._build('analog_channels')
-			self._build(['{0:d}'.format(ch) for ch in analog])
+			self._build(','.join(analog_ch))
 		self._finish()
 
 	def reset_active_channels(self):
