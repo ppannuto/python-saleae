@@ -459,7 +459,7 @@ class Saleae():
 		[<saleae.ConnectedDevice #1 LOGIC_4_DEVICE Logic 4 (...) **ACTIVE**>, <saleae.ConnectedDevice #2 LOGIC_8_DEVICE Logic 8 (...)>, <saleae.ConnectedDevice #3 LOGIC_PRO_8_DEVICE Logic Pro 8 (...)>, <saleae.ConnectedDevice #4 LOGIC_PRO_16_DEVICE Logic Pro 16 (...)>]
 		'''
 		devices = self._cmd('GET_CONNECTED_DEVICES')
-		# command response is sometimes not the expected one : a non-empty string starting with a digit (index) 
+		# command response is sometimes not the expected one : a non-empty string starting with a digit (index)
 		while ('' == devices or not devices[0].isdigit()):
 			time.sleep(0.1)
 			devices = self._cmd('GET_CONNECTED_DEVICES')
@@ -598,6 +598,8 @@ class Saleae():
 	def capture_to_file(self, file_path_on_target_machine):
 		if os.path.splitext(file_path_on_target_machine)[1] == '':
 			file_path_on_target_machine += '.logicdata'
+		# Fix windows path if needed
+		file_path_on_target_machine = repr(file_path_on_target_machine).replace("\\", r"\\")[1:-1]
 		self._cmd('CAPTURE_TO_FILE, ' + file_path_on_target_machine)
 
 	def get_inputs(self):
@@ -612,9 +614,13 @@ class Saleae():
 	def save_to_file(self, file_path_on_target_machine):
 		while not self.is_processing_complete():
 			time.sleep(1)
+		# Fix windows path if needed
+		file_path_on_target_machine = repr(file_path_on_target_machine).replace("\\", r"\\")[1:-1]
 		self._cmd('SAVE_TO_FILE, ' + file_path_on_target_machine)
 
 	def load_from_file(self, file_path_on_target_machine):
+		# Fix windows path if needed
+		file_path_on_target_machine = repr(file_path_on_target_machine).replace("\\", r"\\")[1:-1]
 		self._cmd('LOAD_FROM_FILE, ' + file_path_on_target_machine)
 
 	def close_all_tabs(self):
@@ -654,7 +660,8 @@ class Saleae():
 		# for something that will definitely fail
 		if file_path_on_target_machine[0] in ('~', '.'):
 			raise NotImplementedError('File path must be absolute')
-
+		# Fix windows path if needed
+		file_path_on_target_machine = repr(file_path_on_target_machine).replace("\\", r"\\")[1:-1]
 		self._build('EXPORT_DATA')
 		self._build(file_path_on_target_machine)
 		if (digital_channels is None) and (analog_channels is None):
@@ -825,7 +832,8 @@ class Saleae():
 		# NOTE: Note to Saleae, Logic should resolve relative paths, I do not see reasons not to do this ...
 		if file_path_on_target_machine[0] in ('~', '.'):
 			raise ValueError('File path must be absolute')
-
+		# Fix windows path if needed
+		file_path_on_target_machine = repr(file_path_on_target_machine).replace("\\", r"\\")[1:-1]
 		self._build('EXPORT_DATA2')
 		self._build(file_path_on_target_machine)
 
