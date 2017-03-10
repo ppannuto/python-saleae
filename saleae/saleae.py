@@ -599,7 +599,7 @@ class Saleae():
 		if os.path.splitext(file_path_on_target_machine)[1] == '':
 			file_path_on_target_machine += '.logicdata'
 		# Fix windows path if needed
-		file_path_on_target_machine.replace('\\', '/')
+		file_path_on_target_machine = eval(repr(file_path_on_target_machine.replace('\\', '/')))
 		self._cmd('CAPTURE_TO_FILE, ' + file_path_on_target_machine)
 
 	def get_inputs(self):
@@ -615,12 +615,12 @@ class Saleae():
 		while not self.is_processing_complete():
 			time.sleep(1)
 		# Fix windows path if needed
-		file_path_on_target_machine.replace('\\', '/')
+		file_path_on_target_machine = eval(repr(file_path_on_target_machine.replace('\\', '/')))
 		self._cmd('SAVE_TO_FILE, ' + file_path_on_target_machine)
 
 	def load_from_file(self, file_path_on_target_machine):
 		# Fix windows path if needed
-		file_path_on_target_machine.replace('\\', '/')
+		file_path_on_target_machine = eval(repr(file_path_on_target_machine.replace('\\', '/')))
 		self._cmd('LOAD_FROM_FILE, ' + file_path_on_target_machine)
 
 	def close_all_tabs(self):
@@ -661,7 +661,7 @@ class Saleae():
 		if file_path_on_target_machine[0] in ('~', '.'):
 			raise NotImplementedError('File path must be absolute')
 		# Fix windows path if needed
-		file_path_on_target_machine.replace('\\', '/')
+		file_path_on_target_machine = eval(repr(file_path_on_target_machine.replace('\\', '/')))
 		self._build('EXPORT_DATA')
 		self._build(file_path_on_target_machine)
 		if (digital_channels is None) and (analog_channels is None):
@@ -833,7 +833,7 @@ class Saleae():
 		if file_path_on_target_machine[0] in ('~', '.'):
 			raise ValueError('File path must be absolute')
 		# Fix windows path if needed
-		file_path_on_target_machine.replace('\\', '/')
+		file_path_on_target_machine = eval(repr(file_path_on_target_machine.replace('\\', '/')))
 		self._build('EXPORT_DATA2')
 		self._build(file_path_on_target_machine)
 
