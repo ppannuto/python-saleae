@@ -19,6 +19,7 @@ import contextlib
 import enum
 import inspect
 import os
+import subprocess
 import platform
 import psutil
 import socket
@@ -86,8 +87,9 @@ class Saleae():
 			if ret != 0:
 				raise OSError("Failed to open Logic software")
 		elif platform.system() == 'Linux':
-			ret = os.system('Logic')
-			if ret != 0:
+			try:
+				subprocess.Popen('Logic', shell=True, stdout=subprocess.PIPE)
+			except FileNotFoundError:
 				raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
 		elif platform.system() == 'Windows':
 			p = os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")
@@ -389,7 +391,7 @@ class Saleae():
 			adc_width = 12
 
 		return sample_rate[0] * len(digital_channels) +\
-		       sample_rate[1] * len(analog_channels) * adc_width
+			   sample_rate[1] * len(analog_channels) * adc_width
 
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
