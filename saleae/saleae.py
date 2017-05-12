@@ -1,13 +1,8 @@
-:%s/\t/  /g#!/usr/bin/env python3
-# vim: tw=80 ts=4 sts=4 sw=4 smarttab noet
-
-
-# Coerce Py2k to act more like Py3k
-# https://pypi.python.org/pypi/future
+#!/usr/bin/env python3 # Coerce Py2k to act more like Py3k # https://pypi.python.org/pypi/future
 
 from __future__ import (absolute_import, division, print_function, unicode_literals)
 from builtins import (bytes, dict, int, list, object, range, str, ascii, chr,
-        hex, input, next, oct, open, pow, round, super, filter, map, zip)
+                      hex, input, next, oct, open, pow, round, super, filter, map, zip)
 
 
 import logging
@@ -23,6 +18,7 @@ import subprocess
 import platform
 import psutil
 import socket
+import signal
 import sys
 import time
 import warnings
@@ -70,6 +66,7 @@ class ConnectedDevice():
 
 
 class Saleae():
+    process = None
     class SaleaeError(Exception):
         pass
 
@@ -79,22 +76,16 @@ class Saleae():
     class ImpossibleSettings(SaleaeError):
         pass
 
-    @staticmethod
-    def launch_logic(timeout=5):
+    def launch_logic(self, timeout=15):
         '''Attempts to open Saleae Logic software'''
-        if platform.system() == 'Darwin':
-            ret = os.system('open /Applications/Logic.app')
-            if ret != 0:
-                raise OSError("Failed to open Logic software")
-        elif platform.system() == 'Linux':
-            try:
-                subprocess.Popen('Logic', shell=True, stdout=subprocess.PIPE)
-            except FileNotFoundError:
-                raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
-        elif platform.system() == 'Windows':
-            p = os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")
-            os.startfile(p)
-        else:
+        command = {'Darwin': 'open /Applications/Logic.app',
+                   'Linux': 'logic',
+                   'Windows': os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")}
+        try:
+            self.process = subprocess.Popen(command[platform.system()], shell=False, stdout=subprocess.PIPE)
+        except FileNotFoundError:
+            raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
+        except KeyError:
             raise NotImplementedError("Unknown platform " + platform.system())
 
         # Try to intelligently wait for Logic to be ready, but can't wait
@@ -107,26 +98,24 @@ class Saleae():
             time.sleep(1)
             timeout -= 1
 
-    @staticmethod
-    def kill_logic():
+    def kill_logic(self):
         '''Attempts to find and kill running Saleae Logic software'''
-        # This is a bit experimental as I'm not sure what the process name will
-        # be on every platform. For now, I'm making the hopefully reasonable and
-        # conservative assumption that if there's only one process running with
-        # 'logic' in the name, that it's Saleae Logic
-        candidates = []
-        for proc in psutil.process_iter():
-            try:
-                if 'logic' in proc.name().lower():
-                    candidates.append(proc)
-            except psutil.NoSuchProcess:
-                pass
-        if len(candidates) == 0:
-            raise OSError("No logic process found")
-        if len(candidates) > 1:
-            raise NotImplementedError("Multiple candidates for logic software."
-                    " Not sure which to kill: " + str(candidates))
-        candidates[0].terminate()
+        if self.process != None:
+            self.process.kill()
+        else:
+            candidates = []
+            for proc in psutil.process_iter():
+                try:
+                    if 'logic' in proc.name().lower():
+                        candidates.append(proc)
+                except psutil.NoSuchProcess:
+                    pass
+            if len(candidates) == 0:
+                raise OSError("No logic process found")
+            if len(candidates) > 1:
+                raise NotImplementedError("Multiple candidates for logic software."
+                        " Not sure which to kill: " + str(candidates))
+            candidates[0].terminate()
 
     def __init__(self, host='localhost', port=10429):
         self._to_send = []
@@ -138,7 +127,7 @@ class Saleae():
             self._s.connect((host, port))
         except ConnectionRefusedError:
             log.info("Could not connect to Logic software, attempting to launch it now")
-            Saleae.launch_logic()
+            self.launch_logic()
 
         try:
             self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
