@@ -123,23 +123,21 @@ class Saleae():
         self.connected_devices = None
 
         try:
-            self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._s.connect((host, port))
+            self._connect(host, port)
         except ConnectionRefusedError:
             log.info("Could not connect to Logic software, attempting to launch it now")
             self.launch_logic()
-
-        try:
-            self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._s.connect((host, port))
+            self._connect(host, port)
         except ConnectionRefusedError:
             print("Failed to connect to saleae at {}:{}".format(host, port))
-            print("")
-            print("Did you remember to 'Enable scripting socket server' (see README)?")
-            print("")
+            print("Did you set 'Enable scripting socket server' in Logic??")
             raise
         log.info("Connected.")
         self._rxbuf = ''
+
+    def _connect(self, host='localhost', port=10429):
+        self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._s.connect((host, port))
 
     def _build(self, s):
         '''Convenience method for building up a command to send'''
