@@ -538,8 +538,16 @@ class Saleae():
 		*Note: This feature is only supported on Logic 16, Logic 8(2nd gen),
 		Logic Pro 8, and Logic Pro 16*
 
+		:raises ImpossibleSettings: if used with a Logic 4 device
+		:raises ImpossibleSettings: if no active channels are given
+
 		>>> s.set_active_channels([0,1,2,3], [0]) #doctest:+SKIP
 		'''
+		# Logic 4 doesn't support setting channels over the scripting server:
+		# https://github.com/saleae/SaleaeSocketApi/blob/master/SaleaeSocketApi/SocketApi.cs#L899
+		if self.get_active_device().type == 'LOGIC_4_DEVICE':
+			raise self.ImpossibleSettings("Logic 4 does not support setting channels")
+
 		# TODO Enfore note from docstring
 		digital_no = 0 if digital is None else len(digital)
 		analog_no = 0 if analog is None else len(analog)
@@ -953,11 +961,14 @@ def demo(host='localhost', port=10429):
 		print("Only one Saleae device. Skipping device selection")
 	input("Press Enter to continue...\n")
 
-	digital = [0,1,2,3,4]
-	analog = [0,1]
-	print("Setting active channels (digital={}, analog={})".format(digital, analog))
-	s.set_active_channels(digital, analog)
-	input("Press Enter to continue...\n")
+	if s.get_active_device().type == 'LOGIC_4_DEVICE':
+		print("Logic 4 does not support setting active channels; skipping")
+	else:
+		digital = [0,1,2,3,4]
+		analog = [0,1]
+		print("Setting active channels (digital={}, analog={})".format(digital, analog))
+		s.set_active_channels(digital, analog)
+		input("Press Enter to continue...\n")
 
 	digital, analog = s.get_active_channels()
 	print("Reading back active channels:")
