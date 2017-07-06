@@ -860,6 +860,10 @@ class Saleae():
 			# implementation)
 			if digital_channels is not None and len(digital_channels) and analog_channels is not None and len(analog_channels):
 				self._build('ANALOG_AND_DIGITAL')
+			elif digital_channels is not None and len(digital_channels):
+				self._build('DIGITAL_ONLY')
+			elif analog_channels is not None and len(analog_channels):
+				self._build('ANALOG_ONLY')
 
 			# Add in the channels
 			if digital_channels is not None and len(digital_channels):
