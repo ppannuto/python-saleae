@@ -842,6 +842,10 @@ class Saleae():
 			raise ValueError('File path must be absolute')
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
+		
+		#Get active channels
+		digital_active, analog_active = self.get_active_channels()
+		
 		self._build('EXPORT_DATA2')
 		self._build(file_path_on_target_machine)
 
@@ -858,12 +862,13 @@ class Saleae():
 			# the fact that only ANALOG_AND_DIGITAL is printed and never
 			# DIGITAL_ONLY or ANALOG_ONLY (according to Saleae C#
 			# implementation)
-			if digital_channels is not None and len(digital_channels) and analog_channels is not None and len(analog_channels):
-				self._build('ANALOG_AND_DIGITAL')
-			elif digital_channels is not None and len(digital_channels):
-				self._build('DIGITAL_ONLY')
-			elif analog_channels is not None and len(analog_channels):
-				self._build('ANALOG_ONLY')
+			if len(digital_active) and len(analog_active):
+				if digital_channels is not None and len(digital_channels) and analog_channels is not None and len(analog_channels):
+					self._build('ANALOG_AND_DIGITAL')
+				elif digital_channels is not None and len(digital_channels):
+					self._build('DIGITAL_ONLY')
+				elif analog_channels is not None and len(analog_channels):
+					self._build('ANALOG_ONLY')
 
 			# Add in the channels
 			if digital_channels is not None and len(digital_channels):
