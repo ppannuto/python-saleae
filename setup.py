@@ -12,6 +12,7 @@ exec(open(os.path.join('saleae', 'version.py')).read())
 requires = [
 		'future',
 		'enum34',
+		'psutil',
 		]
 
 setup(
@@ -33,7 +34,14 @@ setup(
 		classifiers=[
 			"Development Status :: 3 - Alpha",
 			"Intended Audience :: Developers",
+			"Programming Language :: Python",
+			"Programming Language :: Python :: 2",
+			"Programming Language :: Python :: 2.7",
 			"Programming Language :: Python :: 3",
+			"Programming Language :: Python :: 3.3",
+			"Programming Language :: Python :: 3.4",
+			"Programming Language :: Python :: 3.5",
+			"Programming Language :: Python :: Implementation :: CPython",
 			"License :: OSI Approved :: MIT License",
 			"Operating System :: OS Independent",
 			"Topic :: Scientific/Engineering",
