@@ -91,6 +91,8 @@ class Saleae():
 				raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
 		elif platform.system() == 'Windows':
 			p = os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")
+			if not os.path.exists(p):
+				p = os.path.join("C:", "Program Files", "Saleae LLC", "Logic.exe")
 			os.startfile(p)
 		else:
 			raise NotImplementedError("Unknown platform " + platform.system())
