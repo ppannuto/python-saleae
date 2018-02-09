@@ -21,6 +21,7 @@ import inspect
 import os
 import platform
 import psutil
+import shutil
 import socket
 import sys
 import time
@@ -31,6 +32,9 @@ try:
 	ConnectionRefusedError
 except NameError:
 	ConnectionRefusedError = socket.error
+
+PY2K = sys.version_info[0] == 2
+PY3K = sys.version_info[0] == 3
 
 @enum.unique
 class Trigger(enum.IntEnum):
@@ -86,9 +90,14 @@ class Saleae():
 			if ret != 0:
 				raise OSError("Failed to open Logic software")
 		elif platform.system() == 'Linux':
-			ret = os.system('Logic')
-			if ret != 0:
-				raise OSError("Failed to open Logic software. Is 'Logic' in your PATH?")
+			if PY2K:
+				log.warn("PY2K support limited. If `Logic` is not on your PATH it will not open.")
+				os.system("Logic &")
+			else:
+				path = shutil.which('Logic')
+				if path is None:
+					raise OSError("Cannot find Logic software. Is 'Logic' in your PATH?")
+				os.system(path + '&')
 		elif platform.system() == 'Windows':
 			p = os.path.join("C:", "Program Files", "Saleae Inc", "Logic.exe")
 			if not os.path.exists(p):
