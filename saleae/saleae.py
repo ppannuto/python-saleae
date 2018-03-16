@@ -416,6 +416,10 @@ class Saleae():
 		>>> s.get_digital_voltage_options()
 		[(0, '1.2 Volts', <DigitalVoltageFlags.Selected: 1>), (1, '1.8 Volts', <DigitalVoltageFlags.NotSelected: 0>), (2, '3.3+ Volts', <DigitalVoltageFlags.NotSelected: 0>)]
 		'''
+		# Logic 4 doesn't support getting digital I/O voltage threshold over the scripting server:
+		if self.get_active_device().type == 'LOGIC_4_DEVICE':
+			raise self.ImpossibleSettings("Logic 4 does not support getting digital I/O voltage threshold")
+
 		voltages = self._cmd('GET_DIGITAL_VOLTAGE_OPTIONS')
 		self.digital_voltages = []
 		for line in voltages.split('\n'):
@@ -434,6 +438,10 @@ class Saleae():
 		:raises ImpossibleSettings: raised if out of range index is requested
 		>>> s.set_digital_voltage_option(0) #doctest:+SKIP
 		'''
+		# Logic 4 doesn't support setting digital I/O voltage threshold over the scripting server:
+		if self.get_active_device().type == 'LOGIC_4_DEVICE':
+			raise self.ImpossibleSettings("Logic 4 does not support setting digital I/O voltage threshold")
+
 		self.get_digital_voltage_options()
 		for option_index in [option[0] for option in self.digital_voltages]:
 			if option_index == index:
