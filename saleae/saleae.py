@@ -54,6 +54,11 @@ class PerformanceOption(enum.IntEnum):
 	Quarter = 25
 	Low = 20
 
+@enum.unique
+class DigitalVoltageFlags(enum.IntEnum):
+	NotSelected = 0
+	Selected = 1
+
 class ConnectedDevice():
 	def __init__(self, type, name, id, index, active):
 		self.type = type
@@ -401,6 +406,49 @@ class Saleae():
 
 		return sample_rate[0] * len(digital_channels) +\
 		       sample_rate[1] * len(analog_channels) * adc_width
+
+	def get_digital_voltage_options(self):
+		'''Get a list of available digital I/O voltage thresholds for the device and the currently active selection.
+
+		This feature is only supported on the original Logic 16, Logic Pro 8,
+		and Logic Pro 16.
+
+		>>> s.get_digital_voltage_options() #doctest:+SKIP
+		[(0, '1.2 Volts', <DigitalVoltageFlags.Selected: 1>), (1, '1.8 Volts', <DigitalVoltageFlags.NotSelected: 0>), (2, '3.3+ Volts', <DigitalVoltageFlags.NotSelected: 0>)]
+		'''
+		# Logic 4 doesn't support getting digital I/O voltage threshold over the scripting server:
+		if self.get_active_device().type == 'LOGIC_4_DEVICE':
+			raise self.ImpossibleSettings("Logic 4 does not support getting digital I/O voltage threshold")
+
+		voltages = self._cmd('GET_DIGITAL_VOLTAGE_OPTIONS')
+		self.digital_voltages = []
+		for line in voltages.split('\n'):
+			if len(line):
+				l = line.split(',')
+				self.digital_voltages.append((int(l[0]), l[1].strip(), DigitalVoltageFlags.Selected if l[2].strip() == "SELECTED" else DigitalVoltageFlags.NotSelected))
+		return self.digital_voltages
+
+	def set_digital_voltage_option(self, index):
+		'''Set active digital I/O voltage threshold for the device.
+
+		This feature is only supported on the original Logic 16, Logic Pro 8,
+		and Logic Pro 16.
+
+		:param index: digital I/O voltage threshold index from the getter function.
+		:raises ImpossibleSettings: raised if out of range index is requested
+		>>> s.set_digital_voltage_option(0) #doctest:+SKIP
+		'''
+		# Logic 4 doesn't support setting digital I/O voltage threshold over the scripting server:
+		if self.get_active_device().type == 'LOGIC_4_DEVICE':
+			raise self.ImpossibleSettings("Logic 4 does not support setting digital I/O voltage threshold")
+
+		self.get_digital_voltage_options()
+		for option_index in [option[0] for option in self.digital_voltages]:
+			if option_index == index:
+				self._cmd('SET_DIGITAL_VOLTAGE_OPTION, {:d}'.format(int(index)))
+				return
+
+		raise self.ImpossibleSettings("Digital I/O voltage threshold index out of range")
 
 	def get_performance(self):
 		'''Get performance value. Performance controls USB traffic and quality.
