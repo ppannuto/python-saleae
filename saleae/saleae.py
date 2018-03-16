@@ -413,7 +413,7 @@ class Saleae():
 		This feature is only supported on the original Logic 16, Logic Pro 8,
 		and Logic Pro 16.
 
-		>>> s.get_digital_voltage_options()
+		>>> s.get_digital_voltage_options() #doctest:+SKIP
 		[(0, '1.2 Volts', <DigitalVoltageFlags.Selected: 1>), (1, '1.8 Volts', <DigitalVoltageFlags.NotSelected: 0>), (2, '3.3+ Volts', <DigitalVoltageFlags.NotSelected: 0>)]
 		'''
 		# Logic 4 doesn't support getting digital I/O voltage threshold over the scripting server:
