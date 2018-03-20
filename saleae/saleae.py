@@ -940,7 +940,7 @@ class Saleae():
 		if time_span is None:
 			self._build('ALL_TIME')
 		elif len(time_span) == 2:
-			self._build(['TIME_SPAN', '{0:f}'.format(time_span[0]), '{0:f}'.format(time_span[0])])
+			self._build(['TIME_SPAN', '{0:f}'.format(time_span[0]), '{0:f}'.format(time_span[1])])
 		else:
 			raise self.ImpossibleSettings('Unsupported time span')
 
