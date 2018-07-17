@@ -38,6 +38,7 @@ PY3K = sys.version_info[0] == 3
 
 @enum.unique
 class Trigger(enum.IntEnum):
+	'''Trigger types to start sampling.'''
 	# Python convention is to start enums at 1 for truth checks, but it
 	# seems reasonable that no trigger should compare as false
 	NoTrigger = 0
@@ -48,6 +49,11 @@ class Trigger(enum.IntEnum):
 
 @enum.unique
 class PerformanceOption(enum.IntEnum):
+	'''
+	Additional control when performing mixed captures.
+
+	For more see https://github.com/saleae/SaleaeSocketApi/blob/master/Doc/Logic%20Socket%20API%20Users%20Guide.md#set-performance-option
+	'''
 	Full = 100
 	Half = 50
 	Third = 33
@@ -56,6 +62,7 @@ class PerformanceOption(enum.IntEnum):
 
 @enum.unique
 class DigitalVoltageFlags(enum.IntEnum):
+	'''Whether a given voltage is selected.'''
 	NotSelected = 0
 	Selected = 1
 
