@@ -37,8 +37,8 @@ PY2K = sys.version_info[0] == 2
 PY3K = sys.version_info[0] == 3
 
 @enum.unique
-class Trigger(enum.IntEnum):
-	'''Trigger types to start sampling.'''
+class TriggerType(enum.IntEnum):
+	'''trigger types to start sampling.'''
 	# Python convention is to start enums at 1 for truth checks, but it
 	# seems reasonable that no trigger should compare as false
 	NoTrigger = 0
@@ -46,6 +46,35 @@ class Trigger(enum.IntEnum):
 	Low = 2
 	Posedge = 3
 	Negedge = 4
+	Pospulse = 5
+	Negpulse = 6
+
+class Trigger():
+	'''
+	:param trigger_type: See TriggerType class
+	
+	:Keyword Arguments:
+		minimum_pulse_width (String): valid only for Pospulse/Negpulse trigger types (refer to Saleae for allowed ranges; default = '0.1')
+		maximum_pulse_width (String): valid only for Pospulse/Negpulse trigger types (refer to Saleae for allowed ranges; default = '0.1')
+
+	>>> Trigger(TriggerType.Pospulse, '0.0001', '0.0002')
+	>>> Trigger(5, '0.0001', '0.0002')
+	'''
+	def __init__(self, trigger_type, **kwargs):
+		self.trigger_type = TriggerType(trigger_type)
+
+		if self.trigger_type == TriggerType.Pospulse or self.trigger_type == TriggerType.Negpulse:
+			self.minimum_pulse_width = kwargs.get('minimum_pulse_width', '0.1')
+			self.maximum_pulse_width = kwargs.get('maximum_pulse_width', '0.1')
+	
+	def get_trigger_type(self):
+		return self.trigger_type
+		
+	def get_min_width(self):
+		return self.minimum_pulse_width
+
+	def get_max_width(self):
+		return self.maximum_pulse_width
 
 @enum.unique
 class PerformanceOption(enum.IntEnum):
@@ -232,29 +261,32 @@ class Saleae():
 		'''
 		digital, analog = self.get_active_channels()
 
-		to_set = [Trigger.NoTrigger for x in range(len(digital))]
-		trigger = Trigger(trigger)
+		to_set = [Trigger(TriggerType.NoTrigger) for x in range(len(digital))]
 		try:
 			to_set[digital.index(digital_channel)] = trigger
 		except ValueError:
 			raise self.ImpossibleSettings("Cannot set trigger on inactive channel")
 		self._set_triggers_for_all_channels(to_set)
 
-	def _set_triggers_for_all_channels(self, channels):
+	def _set_triggers_for_all_channels(self, triggers):
 		self._build('SET_TRIGGER')
-		for c in channels:
+		for t in triggers:
+			t_type = t.get_trigger_type()
 			# Try coercing b/c it will throw a nice exception if it fails
-			c = Trigger(c)
-			if c == Trigger.NoTrigger:
+			if t_type == TriggerType.NoTrigger:
 				self._build('')
-			elif c == Trigger.High:
+			elif t_type == TriggerType.High:
 				self._build('high')
-			elif c == Trigger.Low:
+			elif t_type == TriggerType.Low:
 				self._build('low')
-			elif c == Trigger.Posedge:
+			elif t_type == TriggerType.Posedge:
 				self._build('posedge')
-			elif c == Trigger.Negedge:
+			elif t_type == TriggerType.Negedge:
 				self._build('negedge')
+			elif t_type == TriggerType.Pospulse:
+				self._build(['pospulse', t.get_min_width(), t.get_max_width()])
+			elif t_type == TriggerType.Negpulse:
+				self._build(['negpulse', t.get_min_width(), t.get_max_width()])
 			else:
 				raise NotImplementedError("Must pass trigger type")
 		self._finish()
@@ -1074,8 +1106,6 @@ def demo(host='localhost', port=10429):
 if __name__ == '__main__':
 	demo()
 
-
-
 ## Support bits for doctests:
 
 # n.b. DocTestRunner is an old-style class so no super for py2k compat
@@ -1093,4 +1123,3 @@ class CustomRunner(_original_runner):
 
 def setup_module(module):
 	doctest.DocTestRunner = CustomRunner
-
