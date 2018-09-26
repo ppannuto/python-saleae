@@ -129,12 +129,13 @@ class Saleae():
 			timeout -= 1
 
 	@staticmethod
-	def kill_logic():
+	def kill_logic(kill_all=False):
 		'''Attempts to find and kill running Saleae Logic software'''
 		# This is a bit experimental as I'm not sure what the process name will
 		# be on every platform. For now, I'm making the hopefully reasonable and
 		# conservative assumption that if there's only one process running with
-		# 'logic' in the name, that it's Saleae Logic
+		# 'logic' in the name, that it's Saleae Logic. If kill_all is set to
+		# True, all processes with 'logic' in the name are killed.
 		candidates = []
 		for proc in psutil.process_iter():
 			try:
@@ -144,10 +145,11 @@ class Saleae():
 				pass
 		if len(candidates) == 0:
 			raise OSError("No logic process found")
-		if len(candidates) > 1:
+		if len(candidates) > 1 and not kill_all:
 			raise NotImplementedError("Multiple candidates for logic software."
 					" Not sure which to kill: " + str(candidates))
-		candidates[0].terminate()
+		for candidate in candidates:
+			candidate.terminate()
 
 	def __init__(self, host='localhost', port=10429):
 		self._to_send = []
