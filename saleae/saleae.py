@@ -95,21 +95,26 @@ class Saleae():
 		pass
 
 	@staticmethod
-	def launch_logic(timeout=5):
+	def launch_logic(timeout=5, quiet=False):
 		'''Attempts to open Saleae Logic software'''
 		if platform.system() == 'Darwin':
 			ret = os.system('open /Applications/Logic.app')
 			if ret != 0:
 				raise OSError("Failed to open Logic software")
 		elif platform.system() == 'Linux':
+			if(quiet):
+				mode = ' > /dev/null 2>&1 &'
+			else:
+				mode = ' &'
+
 			if PY2K:
 				log.warn("PY2K support limited. If `Logic` is not on your PATH it will not open.")
-				os.system("Logic &")
+				os.system("Logic" + mode)
 			else:
 				path = shutil.which('Logic')
 				if path is None:
 					raise OSError("Cannot find Logic software. Is 'Logic' in your PATH?")
-				os.system(path + '&')
+				os.system(path + mode)
 		elif platform.system() == 'Windows':
 			p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
 			if not os.path.exists(p):
@@ -151,7 +156,7 @@ class Saleae():
 		for candidate in candidates:
 			candidate.terminate()
 
-	def __init__(self, host='localhost', port=10429):
+	def __init__(self, host='localhost', port=10429, quiet=False):
 		self._to_send = []
 		self.sample_rates = None
 		self.connected_devices = None
@@ -161,7 +166,7 @@ class Saleae():
 			self._s.connect((host, port))
 		except ConnectionRefusedError:
 			log.info("Could not connect to Logic software, attempting to launch it now")
-			Saleae.launch_logic()
+			Saleae.launch_logic(quiet=quiet)
 
 		try:
 			self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -910,10 +915,10 @@ class Saleae():
 			raise ValueError('File path must be absolute')
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
-		
+
 		#Get active channels
 		digital_active, analog_active = self.get_active_channels()
-		
+
 		self._build('EXPORT_DATA2')
 		self._build(file_path_on_target_machine)
 
@@ -1095,4 +1100,3 @@ class CustomRunner(_original_runner):
 
 def setup_module(module):
 	doctest.DocTestRunner = CustomRunner
-
