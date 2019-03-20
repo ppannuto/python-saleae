@@ -95,19 +95,28 @@ class Saleae():
 		pass
 
 	@staticmethod
-	def launch_logic(timeout=5, quiet=False):
-		'''Attempts to open Saleae Logic software'''
+	def launch_logic(timeout=5, quiet=False, logic_path=None):
+		'''Attempts to open Saleae Logic software
+
+		:param timeout: Time in seconds to wait for the Logic software to launch
+		:param quiet: Silence terminal output from Logic (Linux only, otherwise ignored)
+		:param logic_path:
+			Full path to Logic executable. If not provided, attempt to find Logic
+			at a standard location.
+		'''
 		if platform.system() == 'Darwin':
-			ret = os.system('open /Applications/Logic.app')
-			if ret != 0:
+			logic_path = logic_path or '/Applications/Logic.app'
+			if os.system('open {}'.format(logic_path)) != 0:
 				raise OSError("Failed to open Logic software")
 		elif platform.system() == 'Linux':
-			if(quiet):
+			if quiet:
 				mode = ' > /dev/null 2>&1 &'
 			else:
 				mode = ' &'
 
-			if PY2K:
+			if logic_path is not None:
+				os.system(logic_path + mode)
+			elif PY2K:
 				log.warn("PY2K support limited. If `Logic` is not on your PATH it will not open.")
 				os.system("Logic" + mode)
 			else:
@@ -116,9 +125,12 @@ class Saleae():
 					raise OSError("Cannot find Logic software. Is 'Logic' in your PATH?")
 				os.system(path + mode)
 		elif platform.system() == 'Windows':
-			p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
-			if not os.path.exists(p):
-				p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
+			if logic_path is not None:
+				p = logic_path
+			else:
+				p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
+				if not os.path.exists(p):
+					p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
 			os.startfile(p)
 		else:
 			raise NotImplementedError("Unknown platform " + platform.system())
