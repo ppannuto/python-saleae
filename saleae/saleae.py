@@ -151,9 +151,11 @@ class Saleae():
 
 	@staticmethod
 	def kill_logic(kill_all=False):
-		'''Attempts to find and kill running Saleae Logic software'''
-		# If kill_all is set to True, all processes identified as Logic software
-		# by _list_logic_candidates() are killed.
+		'''Attempts to find and kill running Saleae Logic software
+
+		:param kill_all: If there are multiple potential Logic processes, kill them all
+		:raises OSError: rasied if there is no running Logic process found
+		'''
 		candidates = Saleae._list_logic_candidates()
 		if len(candidates) == 0:
 			raise OSError("No logic process found")
