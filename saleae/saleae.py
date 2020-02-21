@@ -708,7 +708,7 @@ class Saleae():
 			file_path_on_target_machine += '.logicdata'
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
-		self._cmd('CAPTURE_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('CAPTURE_TO_FILE, ' + os.path.abspath(file_path_on_target_machine))
 
 	def get_inputs(self):
 		raise NotImplementedError("Saleae temporarily dropped this command")
@@ -724,12 +724,12 @@ class Saleae():
 			time.sleep(1)
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
-		self._cmd('SAVE_TO_FILE, ' + file_path_on_target_machine)
+		self._cmd('SAVE_TO_FILE, ' + os.path.abspath(file_path_on_target_machine))
 
 	def load_from_file(self, file_path_on_target_machine):
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
-		self._cmd('LOAD_FROM_FILE, ' + file_path_on_target_machine)
+		self._cmd('LOAD_FROM_FILE, ' + os.path.abspath(file_path_on_target_machine))
 
 	def close_all_tabs(self):
 		self._cmd('CLOSE_ALL_TABS')
@@ -771,7 +771,7 @@ class Saleae():
 		# Fix windows path if needed
 		file_path_on_target_machine.replace('\\', '/')
 		self._build('EXPORT_DATA')
-		self._build(file_path_on_target_machine)
+		self._build(os.path.abspath(file_path_on_target_machine))
 		if (digital_channels is None) and (analog_channels is None):
 			self._build('all_channels')
 			analog_channels = self.get_active_channels()[1]
@@ -947,7 +947,7 @@ class Saleae():
 		digital_active, analog_active = self.get_active_channels()
 
 		self._build('EXPORT_DATA2')
-		self._build(file_path_on_target_machine)
+		self._build(os.path.abspath(file_path_on_target_machine))
 
 		# Channel selection
 		is_analog = False
@@ -1016,7 +1016,7 @@ class Saleae():
 				time.sleep(0.1)
 		self._build('EXPORT_ANALYZER')
 		self._build(str(analyzer_index))
-		self._build(save_path)
+		self._build(os.path.abspath(save_path))
 		if data_response:
 			self._build('data_response')  # any old extra parameter can be used
 		resp = self._finish()
