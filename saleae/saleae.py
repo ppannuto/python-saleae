@@ -457,9 +457,11 @@ class Saleae():
 		>>> s.get_digital_voltage_options() #doctest:+SKIP
 		[(0, '1.2 Volts', <DigitalVoltageFlags.Selected: 1>), (1, '1.8 Volts', <DigitalVoltageFlags.NotSelected: 0>), (2, '3.3+ Volts', <DigitalVoltageFlags.NotSelected: 0>)]
 		'''
-		# Logic 4 doesn't support getting digital I/O voltage threshold over the scripting server:
+		# Logic and Logic 4 don't support getting digital I/O voltage threshold over the scripting server:
 		if self.get_active_device().type == 'LOGIC_4_DEVICE':
 			raise self.ImpossibleSettings("Logic 4 does not support getting digital I/O voltage threshold")
+		elif self.get_active_device().type == 'LOGIC_DEVICE':
+			raise self.ImpossibleSettings("Logic does not support getting digital I/O voltage threshold")
 
 		voltages = self._cmd('GET_DIGITAL_VOLTAGE_OPTIONS')
 		self.digital_voltages = []
@@ -479,9 +481,11 @@ class Saleae():
 		:raises ImpossibleSettings: raised if out of range index is requested
 		>>> s.set_digital_voltage_option(0) #doctest:+SKIP
 		'''
-		# Logic 4 doesn't support setting digital I/O voltage threshold over the scripting server:
+		# Logic and Logic 4 don't support setting digital I/O voltage threshold over the scripting server:
 		if self.get_active_device().type == 'LOGIC_4_DEVICE':
 			raise self.ImpossibleSettings("Logic 4 does not support setting digital I/O voltage threshold")
+		elif self.get_active_device().type == 'LOGIC_DEVICE':
+			raise self.ImpossibleSettings("Logic does not support setting digital I/O voltage threshold")
 
 		self.get_digital_voltage_options()
 		for option_index in [option[0] for option in self.digital_voltages]:
@@ -612,11 +616,11 @@ class Saleae():
 		>>> s.get_active_channels()
 		([0, 1, 2, 3], [0])
 		'''
-		# If an old Logic8 is connected this command does not work, but all 8
+		# If an old Logic, Logic 4 or Logic 8 is connected this command does not work, but all 8
 		# digital channels are always active so return that.
 		device = self.get_active_device()
 		if device.type == "LOGIC_DEVICE":
-			return range(8), []
+			return list(range(8)), []
 
 		channels = self._cmd('GET_ACTIVE_CHANNELS')
 		# Work around possible bug in Logic8
@@ -643,10 +647,12 @@ class Saleae():
 
 		>>> s.set_active_channels([0,1,2,3], [0]) #doctest:+SKIP
 		'''
-		# Logic 4 doesn't support setting channels over the scripting server:
+		# Logic and Logic 4 don't support setting channels over the scripting server:
 		# https://github.com/saleae/SaleaeSocketApi/blob/master/SaleaeSocketApi/SocketApi.cs#L899
 		if self.get_active_device().type == 'LOGIC_4_DEVICE':
 			raise self.ImpossibleSettings("Logic 4 does not support setting channels")
+		elif self.get_active_device().type == 'LOGIC_DEVICE':
+			raise self.ImpossibleSettings("Logic does not support setting channels")
 
 		# TODO Enfore note from docstring
 		digital_no = 0 if digital is None else len(digital)
@@ -1072,6 +1078,8 @@ def demo(host='localhost', port=10429):
 
 	if s.get_active_device().type == 'LOGIC_4_DEVICE':
 		print("Logic 4 does not support setting active channels; skipping")
+	elif s.get_active_device().type == 'LOGIC_DEVICE':
+		print("Logic does not support setting active channels; skipping")
 	else:
 		digital = [0,1,2,3,4]
 		analog = [0,1]
