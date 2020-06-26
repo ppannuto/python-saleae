@@ -95,7 +95,7 @@ class Saleae():
 		pass
 
 	@staticmethod
-	def launch_logic(timeout=5, quiet=False, logic_path=None):
+	def launch_logic(timeout=5, quiet=False, logic_path=None, args=None):
 		'''Attempts to open Saleae Logic software
 
 		:param timeout: Time in seconds to wait for the Logic software to launch
@@ -103,9 +103,16 @@ class Saleae():
 		:param logic_path:
 			Full path to Logic executable. If not provided, attempt to find Logic
 			at a standard location.
+		:param args: 
+			Optional argument string to pass to Logic executable
+			Examples:
+			-disablepopups (suppress notifications)
+			-uploaderrors (accept the upload errors dialog and close it)
 		'''
 		if platform.system() == 'Darwin':
 			logic_path = logic_path or '/Applications/Logic.app'
+			if args is not None:
+				logic_path += ' --args {}'.format(args)
 			if os.system('open {}'.format(logic_path)) != 0:
 				raise OSError("Failed to open Logic software")
 		elif platform.system() == 'Linux':
@@ -113,17 +120,19 @@ class Saleae():
 				mode = ' > /dev/null 2>&1 &'
 			else:
 				mode = ' &'
-
+			arg_string = ''
+			if args is not None:
+				arg_string = ' ' + args
 			if logic_path is not None:
-				os.system(logic_path + mode)
+				os.system(logic_path + arg_string + mode)
 			elif PY2K:
 				log.warn("PY2K support limited. If `Logic` is not on your PATH it will not open.")
-				os.system("Logic" + mode)
+				os.system("Logic" + arg_string + mode)
 			else:
 				path = shutil.which('Logic')
 				if path is None:
 					raise OSError("Cannot find Logic software. Is 'Logic' in your PATH?")
-				os.system(path + mode)
+				os.system(path + arg_string + mode)
 		elif platform.system() == 'Windows':
 			if logic_path is not None:
 				p = logic_path
@@ -131,7 +140,9 @@ class Saleae():
 				p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
 				if not os.path.exists(p):
 					p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
-			os.startfile(p)
+			if args is not None:
+				p += ' ' + args
+			os.system(p)
 		else:
 			raise NotImplementedError("Unknown platform " + platform.system())
 
@@ -183,7 +194,7 @@ class Saleae():
 		# Relies on _list_logic_candidates() to identify Logic software.
 		return bool(Saleae._list_logic_candidates())
 
-	def __init__(self, host='localhost', port=10429, quiet=False):
+	def __init__(self, host='localhost', port=10429, quiet=False, args=None):
 		self._to_send = []
 		self.sample_rates = None
 		self.connected_devices = None
@@ -193,7 +204,7 @@ class Saleae():
 			self._s.connect((host, port))
 		except ConnectionRefusedError:
 			log.info("Could not connect to Logic software, attempting to launch it now")
-			Saleae.launch_logic(quiet=quiet)
+			Saleae.launch_logic(quiet=quiet, args=args)
 
 		try:
 			self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
