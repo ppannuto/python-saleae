@@ -140,6 +140,7 @@ class Saleae():
 				p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
 				if not os.path.exists(p):
 					p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
+			p = '"{}"'.format(p)
 			if args is not None:
 				p += ' ' + args
 			os.system(p)
