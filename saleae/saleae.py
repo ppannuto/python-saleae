@@ -141,13 +141,12 @@ class Saleae():
 				p = os.path.join("C:", os.sep, "Program Files", "Saleae Inc", "Logic.exe")
 				if not os.path.exists(p):
 					p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
-			p = '"{}"'.format(p)
 
 			popen_args = [p]
 			if args is not None:
 				popen_args.extend(args.split())
 
-			subprocess.Popen([popen_args])
+			subprocess.Popen(popen_args)
 		else:
 			raise NotImplementedError("Unknown platform " + platform.system())
 
