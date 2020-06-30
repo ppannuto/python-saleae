@@ -26,6 +26,7 @@ import socket
 import sys
 import time
 import warnings
+import subprocess
 
 # Py2k compat. This isn't actually 1:1, but is sufficient for our purposes
 try:
@@ -141,9 +142,12 @@ class Saleae():
 				if not os.path.exists(p):
 					p = os.path.join("C:", os.sep, "Program Files", "Saleae LLC", "Logic.exe")
 			p = '"{}"'.format(p)
+
+			popen_args = [p]
 			if args is not None:
-				p += ' ' + args
-			os.system(p)
+				popen_args.extend(args.split())
+
+			subprocess.Popen([popen_args])
 		else:
 			raise NotImplementedError("Unknown platform " + platform.system())
 
