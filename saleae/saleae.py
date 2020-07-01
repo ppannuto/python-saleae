@@ -1050,6 +1050,10 @@ class Saleae():
 		resp = self._finish()
 		return resp.strip().upper() == 'TRUE'
 
+	def exit(self):
+		'''close the software gracefully'''
+		self._cmd('EXIT')
+
 
 def demo(host='localhost', port=10429):
 	'''A demonstration / usage guide that mirrors Saleae's C# demo'''
