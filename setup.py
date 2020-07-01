@@ -11,7 +11,7 @@ exec(open(os.path.join('saleae', 'version.py')).read())
 
 requires = [
 		'future',
-		'enum34',
+		'enum34;python_version<"3.4"',
 		'psutil',
 		]
 
