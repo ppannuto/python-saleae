@@ -96,7 +96,7 @@ class Saleae():
 		pass
 
 	@staticmethod
-	def launch_logic(timeout=5, quiet=False, logic_path=None, args=None):
+	def launch_logic(timeout=15, quiet=False, logic_path=None, args=None):
 		'''Attempts to open Saleae Logic software
 
 		:param timeout: Time in seconds to wait for the Logic software to launch
@@ -109,6 +109,7 @@ class Saleae():
 			Examples:
 			-disablepopups (suppress notifications)
 			-uploaderrors (accept the upload errors dialog and close it)
+		:returns True if the Logic software launched and accepted a socket connection within the timeout
 		'''
 		if platform.system() == 'Darwin':
 			logic_path = logic_path or '/Applications/Logic.app'
@@ -152,13 +153,15 @@ class Saleae():
 
 		# Try to intelligently wait for Logic to be ready, but can't wait
 		# forever because user may not have enabled the scripting server
-		while timeout > 0:
+		connection_start = time.time()
+		while time.time() < (connection_start + timeout):
 			with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
 				if sock.connect_ex(('localhost', 10429)) == 0:
-					break
+					print('connection detected after {} seconds'.format(time.time()-connection_start))
+					return True
 			log.debug('launch_logic: port not yet open, sleeping 1s')
 			time.sleep(1)
-			timeout -= 1
+		return False
 
 	@staticmethod
 	def _list_logic_candidates():
