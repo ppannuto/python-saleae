@@ -104,7 +104,7 @@ class Saleae():
 		:param logic_path:
 			Full path to Logic executable. If not provided, attempt to find Logic
 			at a standard location.
-		:param args: 
+		:param args:
 			Optional argument string to pass to Logic executable
 			Examples:
 			-disablepopups (suppress notifications)
@@ -348,6 +348,7 @@ class Saleae():
 		>>> s.set_capture_seconds(1)
 		'''
 		self._cmd('SET_CAPTURE_SECONDS, {}'.format(float(seconds)))
+
 
 	def set_sample_rate(self, sample_rate_tuple):
 		'''Set the sample rate. Note the caveats. Consider ``set_sample_rate_by_minimum``.
@@ -726,6 +727,71 @@ class Saleae():
 			return True
 		except self.CommandNAKedError:
 			return False
+
+	def get_capture_range(self):
+
+		'''Get information on how many samples were collected in the open capture.
+
+		Only issue this command if a capture is open.
+
+		:returns: A list containing starting, trigger, ending and lcm samples
+
+		>>> s.get_capture_range()
+		[1012307526, 1037307526, 1037635205, 250000000]
+		'''
+		try:
+			indexes = self._cmd('GET_CAPTURE_RANGE')
+			index_samples = list(map(int, map(str.strip, indexes.split(','))))
+			return index_samples
+
+		except self.CommandNAKedError:
+			log.warn("Are you sure that a capture is already open?")
+			raise
+
+	def get_view_state(self):
+
+		'''Get current zoom and pan offset of the display.
+
+		Only issue this command if a capture is open.
+
+		:returns A list containing zoom samples per pixel, pan stating sample,
+		lcm sample rate.
+
+		>>> s.get_view_state()
+		[44512.617188, 1012378521.195313, 250000000.0]
+		'''
+		try:
+			samples = self._cmd('GET_VIEWSTATE')
+			view_state = list(map(float, map(str.strip, samples.split(','))))
+			return view_state
+
+		except self.CommandNAKedError:
+			log.warn("Are you sure that a capture is already open?")
+			raise
+
+	def set_view_state(self, zoom_index, pan_offset):
+
+		'''Set current zoom and pan offset of the display.
+
+		Only issue this command if a capture is open.
+
+		:param zoom_index: zoom level of the display, in units how
+		many samples are represented by a single horizontal pixel.
+		:param pan_offset: sample index of the first sample on the left edge of the graph.
+		:returns: True if the Logic software accepted the zoom and pan offset values
+
+		>>> s.set_view_state(1012378521, 2.617188)
+		True
+		'''
+		try:
+			self._build('SET_VIEWSTATE')
+			self._build(str(zoom_index))
+			self._build(str(pan_offset))
+			self._finish()
+			return True
+		except self.CommandNAKedError:
+			log.warn("Are you sure that a capture is already open?")
+			raise
 
 	def capture_to_file(self, file_path_on_target_machine):
 		if os.path.splitext(file_path_on_target_machine)[1] == '':
