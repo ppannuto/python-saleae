@@ -104,7 +104,7 @@ class Saleae():
 		:param logic_path:
 			Full path to Logic executable. If not provided, attempt to find Logic
 			at a standard location.
-		:param args: 
+		:param args:
 			Optional argument string to pass to Logic executable
 			Examples:
 			-disablepopups (suppress notifications)
@@ -349,6 +349,20 @@ class Saleae():
 		'''
 		self._cmd('SET_CAPTURE_SECONDS, {}'.format(float(seconds)))
 
+
+	def get_sample_rate(self):
+		'''Get the currently selected sample rate.
+
+		:returns (digital_rate, analog_rate): A tuple of selected digital and analog sample rate.
+
+		>>> s.get_sample_rate()
+		(12000000, 6000000)
+		'''
+		rates = self._cmd('GET_SAMPLE_RATE')
+
+		return tuple(map(int, rates.split('\n')[:-1]))
+
+
 	def set_sample_rate(self, sample_rate_tuple):
 		'''Set the sample rate. Note the caveats. Consider ``set_sample_rate_by_minimum``.
 
@@ -439,9 +453,7 @@ class Saleae():
 	def get_bandwidth(self, sample_rate, device = None, channels = None):
 		'''Compute USB bandwidth for a given configuration.
 
-		Must supply sample_rate because Saleae API has no get_sample_rate method.
-
-		>>> s.get_bandwidth(s.get_all_sample_rates()[0])
+		>>> s.get_bandwidth(s.get_sample_rate())
 		96000000
 		'''
 		# From https://github.com/ppannuto/python-saleae/issues/8
