@@ -12,7 +12,7 @@ from builtins import (bytes, dict, int, list, object, range, str, ascii, chr,
 
 import logging
 log = logging.getLogger(__name__)
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 import bisect
 import contextlib
@@ -157,7 +157,7 @@ class Saleae():
 		while time.time() < (connection_start + timeout):
 			with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
 				if sock.connect_ex(('localhost', 10429)) == 0:
-					print('connection detected after {} seconds'.format(time.time()-connection_start))
+					log.info('connection detected after {} seconds'.format(time.time()-connection_start))
 					return True
 			log.debug('launch_logic: port not yet open, sleeping 1s')
 			time.sleep(1)
@@ -211,16 +211,16 @@ class Saleae():
 			self._s.connect((host, port))
 		except ConnectionRefusedError:
 			log.info("Could not connect to Logic software, attempting to launch it now")
-			Saleae.launch_logic(quiet=quiet, args=args)
+			Saleae.launch_logic(quiet=quiet, host=host, port=port, args=args)
 
 		try:
 			self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self._s.connect((host, port))
 		except ConnectionRefusedError:
-			print("Failed to connect to saleae at {}:{}".format(host, port))
-			print("")
-			print("Did you remember to 'Enable scripting socket server' (see README)?")
-			print("")
+			log.error("Failed to connect to saleae at {}:{}".format(host, port))
+			log.info("")
+			log.info("Did you remember to 'Enable scripting socket server' (see README)?")
+			log.info("")
 			raise
 		log.info("Connected.")
 		self._rxbuf = ''
