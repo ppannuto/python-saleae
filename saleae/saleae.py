@@ -96,7 +96,7 @@ class Saleae():
 		pass
 
 	@staticmethod
-	def launch_logic(timeout=15, quiet=False, logic_path=None, args=None):
+	def launch_logic(timeout=15, quiet=False, host='localhost', port=10429, logic_path=None, args=None):
 		'''Attempts to open Saleae Logic software
 
 		:param timeout: Time in seconds to wait for the Logic software to launch
@@ -156,7 +156,7 @@ class Saleae():
 		connection_start = time.time()
 		while time.time() < (connection_start + timeout):
 			with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-				if sock.connect_ex(('localhost', 10429)) == 0:
+				if sock.connect_ex((host, port)) == 0:
 					log.info('connection detected after {} seconds'.format(time.time()-connection_start))
 					return True
 			log.debug('launch_logic: port not yet open, sleeping 1s')
