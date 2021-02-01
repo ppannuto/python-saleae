@@ -768,7 +768,7 @@ class Saleae():
 		:returns A list containing zoom samples per pixel, pan stating sample,
 		lcm sample rate.
 
-		>>> s.get_view_state()
+		>>> s.get_view_state()	# doctest: +SKIP
 		[44512.617188, 1012378521.195313, 250000000.0]
 		'''
 		try:
