@@ -747,7 +747,7 @@ class Saleae():
 
 		:returns: A list containing starting, trigger, ending and lcm samples
 
-		>>> s.get_capture_range()
+		>>> s.get_capture_range() #doctest:+SKIP
 		[1012307526, 1037307526, 1037635205, 250000000]
 		'''
 		try:
