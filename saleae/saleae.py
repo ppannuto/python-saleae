@@ -747,7 +747,7 @@ class Saleae():
 
 		:returns: A list containing starting, trigger, ending and lcm samples
 
-		>>> s.get_capture_range()
+		>>> s.get_capture_range() #doctest:+SKIP
 		[1012307526, 1037307526, 1037635205, 250000000]
 		'''
 		try:
@@ -768,7 +768,7 @@ class Saleae():
 		:returns A list containing zoom samples per pixel, pan stating sample,
 		lcm sample rate.
 
-		>>> s.get_view_state()
+		>>> s.get_view_state()	# doctest: +SKIP
 		[44512.617188, 1012378521.195313, 250000000.0]
 		'''
 		try:
@@ -791,7 +791,7 @@ class Saleae():
 		:param pan_offset: sample index of the first sample on the left edge of the graph.
 		:returns: True if the Logic software accepted the zoom and pan offset values
 
-		>>> s.set_view_state(1012378521, 2.617188)
+		>>> s.set_view_state(1012378521, 2.617188) #doctest:+SKIP
 		True
 		'''
 		try:
