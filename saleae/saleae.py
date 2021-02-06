@@ -791,7 +791,7 @@ class Saleae():
 		:param pan_offset: sample index of the first sample on the left edge of the graph.
 		:returns: True if the Logic software accepted the zoom and pan offset values
 
-		>>> s.set_view_state(1012378521, 2.617188)
+		>>> s.set_view_state(1012378521, 2.617188) #doctest:+SKIP
 		True
 		'''
 		try:
