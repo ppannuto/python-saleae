@@ -16,11 +16,11 @@ This library requires Saleae Logic 1.2.x or greater. Unfortunately there is no
 way to check the version of Logic running using the scripting protocol so this
 is difficult to check at runtime.
 
-> Note: Unfortunately, the new Logic2 software does not yet support remote
-> access, so you will have to use the original Logic software.
->
-> You can track Logic2 remote access progress on this thread from Saleae:
-> https://discuss.saleae.com/t/scripting-socket-api/108/3
+  Note: Unfortunately, the new Logic2 software does not yet support remote
+  access, so you will have to use the original Logic software.
+  
+  You can track Logic2 remote access progress on this thread from Saleae:
+  https://discuss.saleae.com/t/scripting-socket-api/108/3
 
 Currently, this is basically a direct mapping of API calls with some small
 sanity checking and conveniences. It has not been extensively tested beyond
