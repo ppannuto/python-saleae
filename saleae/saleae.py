@@ -340,6 +340,15 @@ class Saleae():
 		'''
 		self._cmd('SET_NUM_SAMPLES, {:d}'.format(int(samples)))
 
+	def get_num_samples(self):
+		'''
+		>>> s.set_num_samples(1e6)
+		>>> s.get_num_samples()
+		1000000
+		'''
+		samples = self._cmd('GET_NUM_SAMPLES')
+		return int(samples.rstrip('\n'))
+
 	def set_capture_seconds(self, seconds):
 		'''Set the capture duration to a length of time.
 
