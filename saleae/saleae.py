@@ -315,7 +315,7 @@ class Saleae():
 		'''Set the trigger conditions for all active digital channels.
 
 		:param channels: An array of saleae.Trigger for each channel
-		:raises ImpossibleSettings: rasied if configuration is not provided for all channels
+		:raises ImpossibleSettings: raised if configuration is not provided for all channels or channels doesn't contain exactly one Trigger.Posedge or Trigger.Negedge
 
 		*Note: Calls to this function must always set all active digital
 		channels. The Saleae protocol does not currently expose a method to read
@@ -324,6 +324,8 @@ class Saleae():
 		digital, analog = self.get_active_channels()
 		if len(channels) != len(digital):
 			raise self.ImpossibleSettings("Trigger settings must set all active digital channels")
+		if (channels.count(Trigger.Posedge) + channels.count(Trigger.Negedge)) != 1:
+			raise self.ImpossibleSettings("Triggers must include exactly one Trigger.Posedge or Trigger.Negedge")
 
 		self._set_triggers_for_all_channels(channels)
 
