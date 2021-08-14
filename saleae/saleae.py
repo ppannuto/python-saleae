@@ -37,6 +37,9 @@ except NameError:
 PY2K = sys.version_info[0] == 2
 PY3K = sys.version_info[0] == 3
 
+TRIGGER_MINIMUM_PULSE_WIDTH = 0
+TRIGGER_MAXIMUM_PULSE_WIDTH = 0
+
 @enum.unique
 class Trigger(enum.IntEnum):
 	'''Trigger types to start sampling.'''
@@ -47,6 +50,8 @@ class Trigger(enum.IntEnum):
 	Low = 2
 	Posedge = 3
 	Negedge = 4
+	Pospulse = 5
+	Negpulse = 6
 
 @enum.unique
 class PerformanceOption(enum.IntEnum):
@@ -275,12 +280,12 @@ class Saleae():
 			ret = self._recv(expect_nak=expect_nak)
 		return ret
 
-	def set_trigger_one_channel(self, digital_channel, trigger):
+	def set_trigger_one_channel(self, digital_channel, trigger, minimum_pulse_width = TRIGGER_MINIMUM_PULSE_WIDTH, maximum_pulse_width = TRIGGER_MAXIMUM_PULSE_WIDTH):
 		'''Convenience method to set one trigger.
 
 		:param channel: Integer specifying channel
 		:param trigger: saleae.Trigger indicating trigger type
-		:raises ImpossibleSettings: rasied if channel is not active
+		:raises ImpossibleSettings: raised if channel is not active
 		'''
 		digital, analog = self.get_active_channels()
 
@@ -290,9 +295,9 @@ class Saleae():
 			to_set[digital.index(digital_channel)] = trigger
 		except ValueError:
 			raise self.ImpossibleSettings("Cannot set trigger on inactive channel")
-		self._set_triggers_for_all_channels(to_set)
+		self._set_triggers_for_all_channels(to_set, minimum_pulse_width, maximum_pulse_width)
 
-	def _set_triggers_for_all_channels(self, channels):
+	def _set_triggers_for_all_channels(self, channels, minimum_pulse_width = TRIGGER_MINIMUM_PULSE_WIDTH, maximum_pulse_width = TRIGGER_MAXIMUM_PULSE_WIDTH):
 		self._build('SET_TRIGGER')
 		for c in channels:
 			# Try coercing b/c it will throw a nice exception if it fails
@@ -307,11 +312,21 @@ class Saleae():
 				self._build('posedge')
 			elif c == Trigger.Negedge:
 				self._build('negedge')
+			elif c == Trigger.Pospulse:
+				self._build('pospulse')
+			elif c == Trigger.Negpulse:
+				self._build('negpulse')
 			else:
 				raise NotImplementedError("Must pass trigger type")
+
+			if c == Trigger.Pospulse or c == Trigger.Negpulse:
+				self._build(str(minimum_pulse_width))
+				if maximum_pulse_width > 0:
+					self._build(str(maximum_pulse_width))
+
 		self._finish()
 
-	def set_triggers_for_all_channels(self, channels):
+	def set_triggers_for_all_channels(self, channels, minimum_pulse_width = TRIGGER_MINIMUM_PULSE_WIDTH, maximum_pulse_width = TRIGGER_MAXIMUM_PULSE_WIDTH):
 		'''Set the trigger conditions for all active digital channels.
 
 		:param channels: An array of saleae.Trigger for each channel
@@ -324,10 +339,10 @@ class Saleae():
 		digital, analog = self.get_active_channels()
 		if len(channels) != len(digital):
 			raise self.ImpossibleSettings("Trigger settings must set all active digital channels")
-		if (channels.count(Trigger.Posedge) + channels.count(Trigger.Negedge)) != 1:
-			raise self.ImpossibleSettings("Triggers must include exactly one Trigger.Posedge or Trigger.Negedge")
+		if (channels.count(Trigger.Posedge) + channels.count(Trigger.Negedge) + channels.count(Trigger.Pospulse) + channels.count(Trigger.Negpulse)) != 1:
+			raise self.ImpossibleSettings("Triggers must include exactly one Trigger.Posedge or Trigger.Negedge or Trigger.Pospulse or Trigger.Negpulse")
 
-		self._set_triggers_for_all_channels(channels)
+		self._set_triggers_for_all_channels(channels, minimum_pulse_width, maximum_pulse_width)
 
 	def set_num_samples(self, samples):
 		'''Set the capture duration to a specific number of samples.
