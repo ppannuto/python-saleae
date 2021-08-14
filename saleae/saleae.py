@@ -38,7 +38,7 @@ PY2K = sys.version_info[0] == 2
 PY3K = sys.version_info[0] == 3
 
 TRIGGER_MINIMUM_PULSE_WIDTH = 0
-TRIGGER_MAXIMUM_PULSE_WIDTH = 0
+TRIGGER_MAXIMUM_PULSE_WIDTH = 1
 
 @enum.unique
 class Trigger(enum.IntEnum):
