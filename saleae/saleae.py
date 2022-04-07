@@ -12,7 +12,7 @@ from builtins import (bytes, dict, int, list, object, range, str, ascii, chr,
 
 import logging
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log.setLevel(logging.INFO)
 
 import bisect
 import contextlib
