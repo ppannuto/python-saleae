@@ -21,6 +21,10 @@ is difficult to check at runtime.
   
   You can track Logic2 remote access progress on this thread from Saleae:
   https://discuss.saleae.com/t/scripting-socket-api/108/3
+  
+  **Update: July 2022:** Saleae is developing an official remote scripting
+  inteface and library for Logic2. Check out the alpha/beta and give feedback:
+  https://discuss.saleae.com/t/saleae-logic-2-automation-api/1685/13
 
 Currently, this is basically a direct mapping of API calls with some small
 sanity checking and conveniences. It has not been extensively tested beyond
